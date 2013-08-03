@@ -15,8 +15,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Properties;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -54,20 +52,22 @@ public class Browser extends Object {
 	
 	public static final int ERROR_NOT_SUPPORT = 1; // ObjectException
 	
-	private static HttpHost proxy;
+	private static boolean proxyEnable;
+	private static HttpHost defaultProxy;
 	private static Scheme http;
 	private static Scheme https;
 	
 	private URI uri;
 	private HttpClient httpClient;
 	private HttpContext httpContext;
+	private HttpHost proxy;
 	
-	private Header[] headers;
+	private static int buffer_size = 2048;
+	
 	private String pathContent;
 	private String fileContent;
-	private static int buffer_size = 2048;
-	//private byte[] buffer;
-
+	
+	private Header[] headers;
 	private String protocolVersion;
 	private int statusCode = 0;
 	private String reasonPhrase;
@@ -79,18 +79,23 @@ public class Browser extends Object {
 
 			Properties properties = new Properties();
 			String configuration = path.etc + file.separator
-					+ "util.browser.properties";
+					+ "browser.properties";
 			FileInputStream propsFile = new FileInputStream(
 					Configuration.getProperty("configuration.util.browser",
 							configuration));
 			properties.load(propsFile);
 			propsFile.close();
-
-			String hostname = properties.getProperty("Proxy.hostname");
-			int port = Integer.parseInt(properties.getProperty("Proxy.port",
+			String enable = properties.getProperty("proxy.enable", "false").toLowerCase();
+			if (enable.equals("true") || enable.equals("1"))
+				proxyEnable = true;
+			else
+				proxyEnable = false;
+			String hostname = properties.getProperty("proxy.hostname", 
+					"localhost");
+			int port = Integer.parseInt(properties.getProperty("proxy.port",
 					"8080"));
 			if (hostname != null)
-				proxy = new HttpHost(hostname, port);
+				defaultProxy = new HttpHost(hostname, port);
 			setScheme();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace(System.err); 
@@ -99,14 +104,35 @@ public class Browser extends Object {
 		}
 	}
 
+	
+	public Browser(HttpHost proxy, HttpContext context) {
+		setContext(context);
+		proxyEnable(proxy);
+		setPathContent(path.tmp);
+	}
+	
+	public Browser(HttpHost proxy) {
+		getContext();
+		proxyEnable(proxy);
+		setPathContent(path.tmp);
+	}
+	
 	public Browser(HttpContext context) {
-		this.setClient();
-		this.setContext(context);
+		setContext(context);
+		if (proxyEnable)
+			proxyEnable(defaultProxy);
+		else
+			proxyDisble();
+		setPathContent(path.tmp);
 	}
 
 	public Browser() {
-		this.setClient();
-		this.setContext();
+		getContext();
+		if (proxyEnable)
+			proxyEnable(defaultProxy);
+		else
+			proxyDisble();
+		setPathContent(path.tmp);
 	}
 	
 	private static void setScheme() {
@@ -140,8 +166,35 @@ public class Browser extends Object {
 		}
 	}
 	
-	private void setClient() {
-		httpClient = new DefaultHttpClient();
+	public HttpHost getProxy() {
+		return proxy;
+	}
+	
+	public void setPathContent(String path) {
+		pathContent = path;
+	}
+	
+	private void setContext(HttpContext httpContext) {
+		 this.httpContext = httpContext;
+	}
+	
+	public HttpContext getContext() {
+		if (this.httpContext == null) {
+			CookieStore cookieStore = new BasicCookieStore();
+			HttpContext httpContext = new BasicHttpContext();
+			httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+			this.httpContext = httpContext;
+		}
+		return this.httpContext;
+	}
+
+	public Browser setBufferSize(int size) {
+		buffer_size = size;
+		return this;
+	}
+	
+	private HttpClient getHttpClient() {
+		HttpClient httpClient = new DefaultHttpClient();
 		
 		// HttpParams httpParams = new BasicHttpParams();
 		httpClient.getConnectionManager().getSchemeRegistry()
@@ -152,30 +205,23 @@ public class Browser extends Object {
 		// User-Agent: Mozilla/5.0 (Compatible)
 		httpClient.getParams().setParameter(
 				CoreProtocolPNames.USER_AGENT, "Mozilla/5.0 (Compatible)");
+		return httpClient;
+	}
+	
+	public Browser proxyEnable() {
+		return proxyEnable(getProxy());
+	}
+	
+	public Browser proxyEnable(HttpHost proxy) {
+		httpClient = getHttpClient();
 		if (proxy != null)
 			httpClient.getParams().setParameter(
 					ConnRouteParams.DEFAULT_PROXY, proxy);
-
-		pathContent = path.tmp;
+		return this;
 	}
 	
-	private void setContext() {
-		CookieStore cookieStore = new BasicCookieStore();
-		HttpContext httpContext = new BasicHttpContext();
-		httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
-		this.setContext(httpContext);
-	}
-	
-	private void setContext(HttpContext httpContext) {
-		 this.httpContext = httpContext;
-	}
-	
-	public HttpContext getContext() {
-		return httpContext;
-	}
-
-	public Browser setBufferSize(int size) {
-		buffer_size = size;
+	public Browser proxyDisble() {
+		httpClient = getHttpClient();
 		return this;
 	}
 	
@@ -406,13 +452,11 @@ public class Browser extends Object {
 	
 	
 	public void printHeaders() {
-		System.out.println("#########################");
-		System.out.println("#<START> Headers");
+		printStart("Headers");
 		for (int index = 0; index < headers.length; index++) {
-			System.out.printf("%s = %s\n", headers[index].getName(), headers[index].getValue()); 
+			System.out.printf("%s = '%s'%n", headers[index].getName(), headers[index].getValue()); 
 		}
-		System.out.println("#<END>   Headers");
-		System.out.println("#########################");
+		printEnd("Headers");
 	}
 	
 	public String getCookie(String name) {
@@ -427,15 +471,13 @@ public class Browser extends Object {
 	public void printCookie() {
 		CookieStore cookieStore = (CookieStore) httpContext.getAttribute(ClientContext.COOKIE_STORE);
 		List<Cookie> cookies = cookieStore.getCookies();
-		System.out.println("#########################");
-		System.out.println("#<START> Context Cookie");
+		printStart("Context Cookie");
 		for (int index = 0; index < cookies.size(); index++) {
-			System.out.printf("Name=%s, Value=%s, Path=%s, Domain=%s, Expires=%s\n", 
+			System.out.printf("Name='%s', Value='%s', Path='%s', Domain='%s', Expires='%s'%n", 
 					cookies.get(index).getName(), cookies.get(index).getValue(),
 					cookies.get(index).getPath(), cookies.get(index).getDomain(), cookies.get(index).getExpiryDate()); 
 		}
-		System.out.println("#<END>   Context Cookie");
-		System.out.println("#########################");
+		printEnd("Context Cookie");
 	}
 	
 	public void printContent() {
@@ -443,18 +485,28 @@ public class Browser extends Object {
 			InputStream inputStream = file.read(fileContent);
 			int read = 0;
 			byte[] buffer = new byte[buffer_size];
-			System.out.println("#########################");
-			System.out.println("#<START> Content");
+			printStart("Content");
 			while ((read = inputStream.read(buffer)) != -1) {
 				System.out.print(new String(buffer, 0, read, this
 						.getContentCharset()));
 			}
 			inputStream.close();
-			System.out.println("#<END>   Content");
-			System.out.println("#########################");
+			printEnd("Content");
 		} catch (IOException e) {
 			logger.severe(message(e));
 		}
+	}
+	
+	private void printStart(String message) {
+		System.out.printf("%n/********************%n");
+		System.out.printf(" * Start %s%n", message);
+		System.out.printf(" ********************/%n");
+	}
+	
+	private void printEnd(String message) {
+		System.out.printf("%n/********************%n");
+		System.out.printf(" * End %s%n", message);
+		System.out.printf(" ********************/%n");
 	}
 	
 	public String getFileContent() {
