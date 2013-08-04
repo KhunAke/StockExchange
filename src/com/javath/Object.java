@@ -60,6 +60,7 @@ public class Object {
 			logger = Logger.getLogger(classname);
 		} catch (ClassNotFoundException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 
@@ -88,7 +89,7 @@ public class Object {
 			return new InitialContext().lookup(name);
 		} catch (NamingException e) {
 			logger.severe(message(e));
-			return null;
+			throw new ObjectException(e);
 		}
 	}
 	
@@ -131,8 +132,10 @@ public class Object {
 						this.method = object.getClass().getMethod(methodName, java.lang.Object[].class);
 				} catch (NoSuchMethodException e) {
 					logger.severe(message(e));
+					throw new ObjectException(e);
 				} catch (SecurityException e) {
 					logger.severe(message(e));
+					throw new ObjectException(e);
 				}
 				return this;
 			}
@@ -145,10 +148,13 @@ public class Object {
 						method.invoke(object, (java.lang.Object) arguments);
 				} catch (IllegalAccessException e) {
 					logger.severe(message(e));
+					throw new ObjectException(e);
 				} catch (IllegalArgumentException e) {
 					logger.severe(message(e));
+					throw new ObjectException(e);
 				} catch (InvocationTargetException e) {
 					logger.severe(message(e));
+					throw new ObjectException(e);
 				}
 			}
 			

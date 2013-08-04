@@ -36,8 +36,8 @@ public class ObjectException extends RuntimeException {
 		}
 	}
 	
-	private String classname;
-	private int code;
+	private String classname = null;
+	private int code = 0;
 	
 	public String getSourceClassname() {
 		return classname;
@@ -79,6 +79,12 @@ public class ObjectException extends RuntimeException {
 	
 	public ObjectException(String format, java.lang.Object... value) {
 		this(String.format(format, value));
+	}
+	
+	public ObjectException(Throwable throwable) {
+		this(throwable.getMessage());
+		this.classname = throwable.getClass().getCanonicalName();
+		this.initCause(throwable);
 	}
 
 }

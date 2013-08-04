@@ -14,6 +14,7 @@ import java.util.prefs.Preferences;
 
 import com.javath.Configuration;
 import com.javath.Object;
+import com.javath.ObjectException;
 
 public class Trigger extends Object{
 	
@@ -49,15 +50,20 @@ public class Trigger extends Object{
 			}
 	        
 		} catch (FileNotFoundException e) { 
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (ClassNotFoundException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (InstantiationException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IllegalAccessException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 		
     }

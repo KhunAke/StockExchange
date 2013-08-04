@@ -35,9 +35,11 @@ public class Configuration {
 	        	preferences = Preferences.userRoot().node(application);
 	        
 		} catch (FileNotFoundException e) { 
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
     }
 	

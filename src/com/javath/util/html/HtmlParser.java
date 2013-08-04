@@ -16,6 +16,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.javath.Object;
+import com.javath.ObjectException;
 
 public class HtmlParser extends Object {
 	
@@ -76,10 +77,11 @@ public class HtmlParser extends Object {
 			return fragment;
 		} catch (SAXException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		}
-		return null;
 	}
 	
 	public static String attribute(Node node, String name) {
@@ -134,7 +136,8 @@ public class HtmlParser extends Object {
 			//System.out.print(string.substring(0, string.length() - 2));
 			//System.out.println(" : " + node.getNodeValue());
 		} catch (NullPointerException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 		System.out.println(space + (string.toString() + " : " + node.getNodeValue()).trim());
 	}
@@ -156,7 +159,8 @@ public class HtmlParser extends Object {
 			//System.out.print(string.substring(0, string.length() - 2));
 			//System.out.println(" : " + node.getNodeValue());
 		} catch (NullPointerException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 		return (string.toString() + " : " + node.getNodeValue()).trim();
 	}

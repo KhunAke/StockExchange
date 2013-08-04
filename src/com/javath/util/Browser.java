@@ -47,6 +47,7 @@ import org.apache.http.protocol.HttpContext;
 
 import com.javath.Configuration;
 import com.javath.Object;
+import com.javath.ObjectException;
 
 public class Browser extends Object {
 	
@@ -98,9 +99,11 @@ public class Browser extends Object {
 				defaultProxy = new HttpHost(hostname, port);
 			setScheme();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace(System.err); 
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 
@@ -160,9 +163,11 @@ public class Browser extends Object {
 			//		SSLSocketFactory.STRICT_HOSTNAME_VERIFIER);
 			https = new Scheme("https", 443, sf);
 		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (KeyManagementException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 	
@@ -237,6 +242,7 @@ public class Browser extends Object {
 			this.uri = uri;
 		} catch (URISyntaxException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 	
@@ -261,8 +267,10 @@ public class Browser extends Object {
 			}
 		} catch (ClientProtocolException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} finally {
 			httpGet.abort();
 		}
@@ -298,10 +306,13 @@ public class Browser extends Object {
 			}
 		} catch (UnsupportedEncodingException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (ClientProtocolException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} finally {
 			httpPost.abort();
 		}
@@ -337,7 +348,8 @@ public class Browser extends Object {
 			return new FileInputStream(fileContent);
 		} catch (FileNotFoundException e) {
 			logger.severe(message(e));
-			return null;
+			throw new ObjectException(e);
+			//return null;
 		}
 	}
 	
@@ -442,6 +454,7 @@ public class Browser extends Object {
 			}
 		} catch (IOException e) {
 			logger.severe(message(e));
+			throw new ObjectException(e);
 		} finally {
 			inputStream.close();
 			outputStream.flush();
@@ -494,6 +507,7 @@ public class Browser extends Object {
 			printEnd("Content");
 		} catch (IOException e) {
 			logger.severe(message(e));
+			//throw new ObjectException(e);
 		}
 	}
 	
