@@ -132,17 +132,13 @@ public class HtmlParser extends Object {
 				string.append(attribute.getNodeValue());
 				string.append("\", ");
 			}
-			string.delete(string.length() - 2, string.length());
-			//System.out.print(string.substring(0, string.length() - 2));
-			//System.out.println(" : " + node.getNodeValue());
-		} catch (NullPointerException e) {
-			//logger.severe(message(e));
-			throw new ObjectException(e);
-		}
+			if (string.charAt(string.length() - 2) == ',')
+				string.delete(string.length() - 2, string.length());
+		} catch (NullPointerException e) {} //bypass 
 		System.out.println(space + (string.toString() + " : " + node.getNodeValue()).trim());
 	}
 	
-	public static String node(Node node) {
+	public static String stringNode(Node node) {
 		StringBuffer string = new StringBuffer();
 		NamedNodeMap attributes = node.getAttributes();
 		try {
@@ -155,13 +151,9 @@ public class HtmlParser extends Object {
 				string.append(attribute.getNodeValue());
 				string.append("\", ");
 			}
-			string.delete(string.length() - 2, string.length());
-			//System.out.print(string.substring(0, string.length() - 2));
-			//System.out.println(" : " + node.getNodeValue());
-		} catch (NullPointerException e) {
-			//logger.severe(message(e));
-			throw new ObjectException(e);
-		}
+			if (string.charAt(string.length() - 2) == ',')
+				string.delete(string.length() - 2, string.length());
+		} catch (NullPointerException e) {} //bypass
 		return (string.toString() + " : " + node.getNodeValue()).trim();
 	}
 	

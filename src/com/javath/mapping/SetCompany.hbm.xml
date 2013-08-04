@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated Aug 4, 2013 4:58:20 PM by Hibernate Tools 4.0.0 -->
+<hibernate-mapping>
+    <class name="com.javath.mapping.SetCompany" table="set_company" schema="public">
+        <id name="symbol" type="string">
+            <column name="symbol" length="16" />
+            <generator class="assigned" />
+        </id>
+        <property name="name" type="string">
+            <column name="name" />
+        </property>
+        <property name="market" type="string">
+            <column name="market" length="8" />
+        </property>
+        <property name="industry" type="string">
+            <column name="industry" />
+        </property>
+        <property name="sector" type="string">
+            <column name="sector" />
+        </property>
+        <property name="update" type="date">
+            <column name="update" length="13" />
+        </property>
+    </class>
+</hibernate-mapping>

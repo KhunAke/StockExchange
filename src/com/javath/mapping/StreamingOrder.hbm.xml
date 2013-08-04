@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated Aug 4, 2013 4:58:20 PM by Hibernate Tools 4.0.0 -->
+<hibernate-mapping>
+    <class name="com.javath.mapping.StreamingOrder" table="streaming_order" schema="public">
+        <composite-id name="id" class="com.javath.mapping.StreamingOrderId">
+            <key-property name="symbol" type="string">
+                <column name="symbol" length="16" />
+            </key-property>
+            <key-property name="date" type="timestamp">
+                <column name="date" length="29" />
+            </key-property>
+        </composite-id>
+        <property name="orderNo" type="java.lang.Long">
+            <column name="order_no" />
+        </property>
+        <property name="side" type="string">
+            <column name="side" length="1" />
+        </property>
+        <property name="price" type="java.lang.Float">
+            <column name="price" precision="8" scale="8" />
+        </property>
+        <property name="volume" type="java.lang.Integer">
+            <column name="volume" />
+        </property>
+        <property name="match" type="java.lang.Integer">
+            <column name="match" />
+        </property>
+        <property name="balance" type="java.lang.Integer">
+            <column name="balance" />
+        </property>
+        <property name="cancelled" type="java.lang.Integer">
+            <column name="cancelled" />
+        </property>
+        <property name="status" type="string">
+            <column name="status" length="32" />
+        </property>
+    </class>
+</hibernate-mapping>

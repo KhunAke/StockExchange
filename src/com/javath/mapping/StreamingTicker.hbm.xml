@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated Aug 4, 2013 4:58:20 PM by Hibernate Tools 4.0.0 -->
+<hibernate-mapping>
+    <class name="com.javath.mapping.StreamingTicker" table="streaming_ticker" schema="public">
+        <composite-id name="id" class="com.javath.mapping.StreamingTickerId">
+            <key-property name="date" type="date">
+                <column name="date" length="13" />
+            </key-property>
+            <key-property name="market" type="short">
+                <column name="market" />
+            </key-property>
+            <key-property name="sequence" type="int">
+                <column name="sequence" />
+            </key-property>
+        </composite-id>
+        <property name="type" type="java.lang.Short">
+            <column name="type" />
+        </property>
+        <property name="n" type="java.lang.Short">
+            <column name="n" />
+        </property>
+        <property name="time" type="timestamp">
+            <column name="time" length="29" />
+        </property>
+        <property name="side" type="string">
+            <column name="side" length="1" />
+        </property>
+        <property name="price" type="java.lang.Float">
+            <column name="price" precision="8" scale="8" />
+        </property>
+        <property name="close" type="java.lang.Float">
+            <column name="close" precision="8" scale="8" />
+        </property>
+        <property name="change" type="java.lang.Float">
+            <column name="change" precision="8" scale="8" />
+        </property>
+        <property name="changePercent" type="java.lang.Float">
+            <column name="change_percent" precision="8" scale="8" />
+        </property>
+        <property name="a" type="string">
+            <column name="a" length="2" />
+        </property>
+        <property name="b" type="string">
+            <column name="b" length="2" />
+        </property>
+        <property name="volume" type="java.lang.Long">
+            <column name="volume" />
+        </property>
+        <property name="symbol" type="string">
+            <column name="symbol" length="16" />
+        </property>
+    </class>
+</hibernate-mapping>

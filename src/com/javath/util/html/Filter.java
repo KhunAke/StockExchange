@@ -72,12 +72,10 @@ public abstract class Filter extends Object {
 					string.append(attribute.getNodeValue());
 					string.append(", ");
 				}
-				System.out.print(string.substring(0, string.length() - 2));
-				System.out.println(" : " + node.getNodeValue());
-			} catch (NullPointerException e) {
-				string.append(node.getNodeValue());
-				System.out.println(string.toString().trim());
-			}
+				if (string.charAt(string.length() - 2) == ',')
+					string.delete(string.length() - 2, string.length());
+			} catch (NullPointerException e) {} //bypass
+			System.out.println((string.toString() + " : " + node.getNodeValue()).trim());
 		}
 	}
 	

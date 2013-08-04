@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+"-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <property name="hibernate.bytecode.use_reflection_optimizer">false</property>
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.password">postgres</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://localhost/StockExchange</property>
+        <property name="hibernate.connection.username">postgres</property>
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+        <property name="hibernate.search.autoregister_listeners">false</property>
+        <mapping resource="com/javath/mapping/BualuangBoardHistory.hbm.xml" />
+        <mapping resource="com/javath/mapping/StreamingTicker.hbm.xml" />
+        <mapping resource="com/javath/mapping/StreamingOrder.hbm.xml" />
+        <mapping resource="com/javath/mapping/StreamingBidsOffers.hbm.xml" />
+        <mapping resource="com/javath/mapping/SettradeBoard.hbm.xml" />
+        <mapping resource="com/javath/mapping/SettradeIndex.hbm.xml" />
+        <mapping resource="com/javath/mapping/SetCompany.hbm.xml" />
+    </session-factory>
+</hibernate-configuration>
