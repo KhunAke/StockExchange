@@ -81,7 +81,7 @@ public class Index extends Object implements Runnable, CustomHandler {
 		} finally {
 			HtmlParser.offer(parser);
 			parser = null;
-			this.nextTask(this.date);
+			//this.nextTask(this.date);
 		}
 	}
 	
@@ -134,9 +134,9 @@ public class Index extends Object implements Runnable, CustomHandler {
 		} else {
 			this.date = date;
 			/** Thread of Board **/
-			new Thread(new Board(date), 
-					String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date))
-				.start();
+			//new Thread(new Board(date), 
+			//		String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date))
+			//	.start();
 		}
 			
 		//System.out.println(String.format("%s, %s, %s", 
@@ -226,6 +226,8 @@ public class Index extends Object implements Runnable, CustomHandler {
 			logger.severe(message(e));
 		}
 		calendar.setTime(date);
+		// switch (String) support compiler compliance settings to 1.7
+		/*
 		switch (this.getStatus()) {
 		case "":
 			calendar.set(Calendar.HOUR_OF_DAY, 9);
@@ -284,6 +286,7 @@ public class Index extends Object implements Runnable, CustomHandler {
 			if ((current - time) < 15000) // 15 (s) * 1000 (ms)
 				calendar.add(Calendar.SECOND, 16);
 		}
+		 */
 		time = calendar.getTimeInMillis();
 		calendar.setTime(new Date());
 		current = calendar.getTimeInMillis();

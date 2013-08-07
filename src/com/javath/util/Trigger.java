@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.Thread.State;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -16,7 +18,7 @@ import com.javath.Configuration;
 import com.javath.Object;
 import com.javath.ObjectException;
 
-public class Trigger extends Object{
+public class Trigger extends Object {
 	
 	private static Trigger trigger;
 	private static Preferences preferences;
@@ -45,7 +47,30 @@ public class Trigger extends Object{
 	        	@SuppressWarnings("unchecked")
 				Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(
 	        			properties.getProperty("Todo." + index));
-	        	Runnable runnable = classRunnable.newInstance();
+	        	Runnable runnable = null;
+				try {
+					runnable = classRunnable.newInstance();
+				} catch (IllegalAccessException e) {
+					try {
+						Method method = classRunnable.getDeclaredMethod("getInstance");
+						runnable = (Runnable) method.invoke(null);
+					} catch (SecurityException ex) {
+						//logger.severe(message(ex));
+						throw new ObjectException(ex);
+					} catch (NoSuchMethodException ex) {
+						//logger.severe(message(ex));
+						throw new ObjectException(ex);
+					} catch (IllegalArgumentException ex) {
+						//logger.severe(message(ex));
+						throw new ObjectException(ex);
+					} catch (IllegalAccessException ex) {
+						//logger.severe(message(ex));
+						throw new ObjectException(ex);
+					} catch (InvocationTargetException ex) {
+						//logger.severe(message(ex));
+						throw new ObjectException(ex);
+					}
+				}
 	        	todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index)));
 			}
 	        
@@ -61,10 +86,7 @@ public class Trigger extends Object{
 		} catch (InstantiationException e) {
 			//logger.severe(message(e));
 			throw new ObjectException(e);
-		} catch (IllegalAccessException e) {
-			//logger.severe(message(e));
-			throw new ObjectException(e);
-		}
+		} 
 		
     }
 	
@@ -160,5 +182,10 @@ public class Trigger extends Object{
 	public void removeTodo(Todo todo) {
 		todoList.remove(todo);
 	}
-
+	
+	public static void main(String[] args) {
+		Trigger trigger = Trigger.getInstance();
+		trigger.start();
+	}
+	
 }

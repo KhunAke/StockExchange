@@ -320,6 +320,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		form.add("mode", mode);
 		String[] services = service.split(",");
 		for (int index = 0; index < services.length; index++) {
+			/**
 			switch (services[index]) {
 			case MarketSummary:
 				break;
@@ -358,6 +359,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				logger.warning(message("Unknow service \"%s\"",services[index]));
 				break;
 			}
+			*/
 		}
 		dataProviderBinary(form);
 		sequenceId2 = String.valueOf(dataBinary.getSequenceId());
@@ -444,7 +446,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			// sequence
 			ticker.setA(tokens[10]);
 			ticker.setB(tokens[11]);
-			ticker.setVolume(Long.valueOf(tokens[12]));
+			ticker.setVolume(Integer.valueOf(tokens[12]));
 			ticker.setSymbol(tokens[13]);
 			
 			home.persist(ticker);

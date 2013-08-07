@@ -1,6 +1,6 @@
 package com.javath.mapping;
 
-// Generated Aug 4, 2013 5:35:49 PM by Hibernate Tools 4.0.0
+// Generated Aug 7, 2013 9:38:50 AM by Hibernate Tools 4.0.0
 
 import java.util.List;
 import javax.naming.InitialContext;
@@ -11,14 +11,14 @@ import org.hibernate.SessionFactory;
 import static org.hibernate.criterion.Example.create;
 
 /**
- * Home object for domain model class BualuangBoardHistory.
- * @see com.javath.mapping.BualuangBoardHistory
+ * Home object for domain model class BualuangBoardDaily.
+ * @see com.javath.mapping.BualuangBoardDaily
  * @author Hibernate Tools
  */
-public class BualuangBoardHistoryHome {
+public class BualuangBoardDailyHome {
 
 	private static final Log log = LogFactory
-			.getLog(BualuangBoardHistoryHome.class);
+			.getLog(BualuangBoardDailyHome.class);
 
 	private final SessionFactory sessionFactory = getSessionFactory();
 
@@ -33,8 +33,8 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public void persist(BualuangBoardHistory transientInstance) {
-		log.debug("persisting BualuangBoardHistory instance");
+	public void persist(BualuangBoardDaily transientInstance) {
+		log.debug("persisting BualuangBoardDaily instance");
 		try {
 			sessionFactory.getCurrentSession().persist(transientInstance);
 			log.debug("persist successful");
@@ -44,8 +44,8 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public void attachDirty(BualuangBoardHistory instance) {
-		log.debug("attaching dirty BualuangBoardHistory instance");
+	public void attachDirty(BualuangBoardDaily instance) {
+		log.debug("attaching dirty BualuangBoardDaily instance");
 		try {
 			sessionFactory.getCurrentSession().saveOrUpdate(instance);
 			log.debug("attach successful");
@@ -55,8 +55,8 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public void attachClean(BualuangBoardHistory instance) {
-		log.debug("attaching clean BualuangBoardHistory instance");
+	public void attachClean(BualuangBoardDaily instance) {
+		log.debug("attaching clean BualuangBoardDaily instance");
 		try {
 			sessionFactory.getCurrentSession().lock(instance, LockMode.NONE);
 			log.debug("attach successful");
@@ -66,8 +66,8 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public void delete(BualuangBoardHistory persistentInstance) {
-		log.debug("deleting BualuangBoardHistory instance");
+	public void delete(BualuangBoardDaily persistentInstance) {
+		log.debug("deleting BualuangBoardDaily instance");
 		try {
 			sessionFactory.getCurrentSession().delete(persistentInstance);
 			log.debug("delete successful");
@@ -77,10 +77,10 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public BualuangBoardHistory merge(BualuangBoardHistory detachedInstance) {
-		log.debug("merging BualuangBoardHistory instance");
+	public BualuangBoardDaily merge(BualuangBoardDaily detachedInstance) {
+		log.debug("merging BualuangBoardDaily instance");
 		try {
-			BualuangBoardHistory result = (BualuangBoardHistory) sessionFactory
+			BualuangBoardDaily result = (BualuangBoardDaily) sessionFactory
 					.getCurrentSession().merge(detachedInstance);
 			log.debug("merge successful");
 			return result;
@@ -90,13 +90,13 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public BualuangBoardHistory findById(
-			com.javath.mapping.BualuangBoardHistoryId id) {
-		log.debug("getting BualuangBoardHistory instance with id: " + id);
+	public BualuangBoardDaily findById(
+			com.javath.mapping.BualuangBoardDailyId id) {
+		log.debug("getting BualuangBoardDaily instance with id: " + id);
 		try {
-			BualuangBoardHistory instance = (BualuangBoardHistory) sessionFactory
+			BualuangBoardDaily instance = (BualuangBoardDaily) sessionFactory
 					.getCurrentSession().get(
-							"com.javath.mapping.BualuangBoardHistory", id);
+							"com.javath.mapping.BualuangBoardDaily", id);
 			if (instance == null) {
 				log.debug("get successful, no instance found");
 			} else {
@@ -109,13 +109,12 @@ public class BualuangBoardHistoryHome {
 		}
 	}
 
-	public List<BualuangBoardHistory> findByExample(
-			BualuangBoardHistory instance) {
-		log.debug("finding BualuangBoardHistory instance by example");
+	public List<BualuangBoardDaily> findByExample(BualuangBoardDaily instance) {
+		log.debug("finding BualuangBoardDaily instance by example");
 		try {
-			List<BualuangBoardHistory> results = (List<BualuangBoardHistory>) sessionFactory
+			List<BualuangBoardDaily> results = (List<BualuangBoardDaily>) sessionFactory
 					.getCurrentSession()
-					.createCriteria("com.javath.mapping.BualuangBoardHistory")
+					.createCriteria("com.javath.mapping.BualuangBoardDaily")
 					.add(create(instance)).list();
 			log.debug("find by example successful, result size: "
 					+ results.size());

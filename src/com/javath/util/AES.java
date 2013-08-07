@@ -13,10 +13,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 
-import com.javath.Configuration;
 import com.javath.Object;
 import com.javath.ObjectException;
-import com.javath.stock.settrade.Index;
 
 public class AES extends Object {
 	

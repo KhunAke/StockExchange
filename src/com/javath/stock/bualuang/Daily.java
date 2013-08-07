@@ -18,9 +18,9 @@ import org.hibernate.SessionFactory;
 
 import com.javath.Configuration;
 import com.javath.Object;
-import com.javath.mapping.BualuangBoardHistory;
-import com.javath.mapping.BualuangBoardHistoryHome;
-import com.javath.mapping.BualuangBoardHistoryId;
+import com.javath.mapping.BualuangBoardDaily;
+import com.javath.mapping.BualuangBoardDailyHome;
+import com.javath.mapping.BualuangBoardDailyId;
 import com.javath.util.Browser;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
@@ -33,7 +33,7 @@ public class Daily extends Object implements Runnable {
 	private static Locale date_locale;
 	private Date date = null;
 	
-	private static BualuangBoardHistoryHome home = new BualuangBoardHistoryHome();
+	private static BualuangBoardDailyHome home = new BualuangBoardDailyHome();
 
 	static {
 		try {
@@ -155,9 +155,9 @@ public class Daily extends Object implements Runnable {
 					
 					SimpleDateFormat format = new SimpleDateFormat("yyMMdd", new Locale("US_us"));
 
-					BualuangBoardHistoryId id = new BualuangBoardHistoryId(textField.getValue(textField.getID("Symbol")),
+					BualuangBoardDailyId id = new BualuangBoardDailyId(textField.getValue(textField.getID("Symbol")),
 							format.parse(textField.getValue(textField.getID("Date"))));
-					BualuangBoardHistory board = new BualuangBoardHistory(id, 
+					BualuangBoardDaily board = new BualuangBoardDaily(id, 
 							Float.valueOf(textField.getValue(textField.getID("Open"))),
 							Float.valueOf(textField.getValue(textField.getID("High"))),
 							Float.valueOf(textField.getValue(textField.getID("Low"))),
