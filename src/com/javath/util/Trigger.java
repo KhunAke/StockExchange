@@ -92,22 +92,22 @@ public class Trigger extends Object {
 	
 	private Trigger() {
 		preferences = Configuration.getPreferenceNode(this.getClassName().replace('.', '/'));
-		preferences.putBoolean("running", false);
-		new Timer().schedule( new TimerTask() {
-			private Trigger trigger;
-			
-			public TimerTask setTrigger(Trigger trigger) {
-				this.trigger = trigger;
-				return this;
-			}
-			
-	  		public void run(){
-	  			long datetime = Calendar.getInstance().getTimeInMillis();
-	  			trigger.checkSchedule(datetime);
-	  		}
-	  		
-		}.setTrigger(this), 0, pulserate);
-		start();
+		boolean running = preferences.getBoolean("running", false);
+		if (running == false)
+			new Timer().schedule( new TimerTask() {
+				private Trigger trigger;
+				
+				public TimerTask setTrigger(Trigger trigger) {
+					this.trigger = trigger;
+					return this;
+				}
+				
+		  		public void run(){
+		  			long datetime = Calendar.getInstance().getTimeInMillis();
+		  			trigger.checkSchedule(datetime);
+		  		}
+		  		
+			}.setTrigger(this), 1, pulserate);
 	}
 	
 	public static Trigger getInstance() {
@@ -117,7 +117,12 @@ public class Trigger extends Object {
 	}
 	
 	public void start() {
-		preferences.putBoolean("running", true);
+		boolean running = preferences.getBoolean("running", false);
+		if (running == false)
+			preferences.putBoolean("running", true);
+		else {
+			throw new RuntimeException("Another application is running");
+		}
 	}
 	
 	public void stop() {

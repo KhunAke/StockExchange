@@ -119,7 +119,7 @@ public class Configuration {
 	public static void main(String[] args) {
 		Options options = initOptions();
 		if (args.length == 0) {
-			usage("Configuration",options);
+			Service.usage("Configuration",options);
 			return;
 		}
 		//CommandLineParser parser = new GnuParser();
@@ -132,7 +132,7 @@ public class Configuration {
 			}
 		} catch (ParseException e) {
 			System.err.println(e.getMessage());
-			usage("Configuration",options);
+			Service.usage("Configuration",options);
 		}
 	}
 	
@@ -150,11 +150,6 @@ public class Configuration {
                 .create("e") );
 		
 		return options;
-	}
-	
-	private static void usage(String command, Options options) {
-		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp( command, options , true);
 	}
 	
 }

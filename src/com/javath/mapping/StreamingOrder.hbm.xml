@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
 "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
-<!-- Generated Aug 4, 2013 5:35:49 PM by Hibernate Tools 4.0.0 -->
+<!-- Generated Aug 7, 2013 9:38:50 AM by Hibernate Tools 4.0.0 -->
 <hibernate-mapping>
     <class name="com.javath.mapping.StreamingOrder" table="streaming_order" schema="public">
         <composite-id name="id" class="com.javath.mapping.StreamingOrderId">

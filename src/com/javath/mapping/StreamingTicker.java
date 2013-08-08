@@ -1,6 +1,6 @@
 package com.javath.mapping;
 
-// Generated Aug 4, 2013 5:35:48 PM by Hibernate Tools 4.0.0
+// Generated Aug 7, 2013 9:38:49 AM by Hibernate Tools 4.0.0
 
 import java.util.Date;
 
@@ -20,7 +20,7 @@ public class StreamingTicker implements java.io.Serializable {
 	private Float changePercent;
 	private String a;
 	private String b;
-	private Long volume;
+	private Integer volume;
 	private String symbol;
 
 	public StreamingTicker() {
@@ -32,7 +32,8 @@ public class StreamingTicker implements java.io.Serializable {
 
 	public StreamingTicker(StreamingTickerId id, Short type, Short n,
 			Date time, String side, Float price, Float close, Float change,
-			Float changePercent, String a, String b, Long volume, String symbol) {
+			Float changePercent, String a, String b, Integer volume,
+			String symbol) {
 		this.id = id;
 		this.type = type;
 		this.n = n;
@@ -136,11 +137,11 @@ public class StreamingTicker implements java.io.Serializable {
 		this.b = b;
 	}
 
-	public Long getVolume() {
+	public Integer getVolume() {
 		return this.volume;
 	}
 
-	public void setVolume(Long volume) {
+	public void setVolume(Integer volume) {
 		this.volume = volume;
 	}
 
