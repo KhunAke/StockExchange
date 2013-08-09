@@ -6,6 +6,7 @@ import java.util.Locale;
 import org.w3c.dom.Node;
 
 import com.javath.Object;
+import com.javath.ObjectException;
 import com.javath.util.Browser;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
@@ -38,7 +39,8 @@ public class Market extends Object implements Runnable, CustomHandler {
 
 	@Override
 	public void run() {
-		getWebPage();
+		//getWebPage();
+		newThread(this, "threadWebPage");
 		nextTask();
 	}
 	

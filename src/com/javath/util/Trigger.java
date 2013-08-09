@@ -7,7 +7,9 @@ import java.lang.Thread.State;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Timer;
@@ -28,6 +30,8 @@ public class Trigger extends Object {
 	private static int pulserate = 60000;
 	private static long stepdown = Long.MAX_VALUE;
 	private static long downtime = 0;
+	
+	private Timer timer;
 	
 	static {
 		try {
@@ -93,21 +97,24 @@ public class Trigger extends Object {
 	private Trigger() {
 		preferences = Configuration.getPreferenceNode(this.getClassName().replace('.', '/'));
 		boolean running = preferences.getBoolean("running", false);
-		if (running == false)
-			new Timer().schedule( new TimerTask() {
-				private Trigger trigger;
-				
-				public TimerTask setTrigger(Trigger trigger) {
-					this.trigger = trigger;
-					return this;
-				}
-				
-		  		public void run(){
-		  			long datetime = Calendar.getInstance().getTimeInMillis();
-		  			trigger.checkSchedule(datetime);
-		  		}
-		  		
-			}.setTrigger(this), 1, pulserate);
+		if (running == true)
+			todoList.clear();
+		this.timer = new Timer();
+		timer.schedule( new TimerTask() {
+		//*	
+			private Trigger trigger;
+			
+			public TimerTask setTrigger(Trigger trigger) {
+				this.trigger = trigger;
+				return this;
+			}
+			
+	  		public void run(){
+	  			long datetime = Calendar.getInstance().getTimeInMillis();
+	  			trigger.checkSchedule(datetime);
+	  		}
+	  	//*	
+		}.setTrigger(this), 1, pulserate);
 	}
 	
 	public static Trigger getInstance() {
@@ -130,16 +137,60 @@ public class Trigger extends Object {
 	}
 	
 	public static void exit() {
-		preferences.putBoolean("running", false);
-		if (doingList.size() == 0) {
-			System.out.println("System exit");
-			System.exit(0);
-		} else
-			stepdown = Calendar.getInstance().getTimeInMillis();
+		Trigger trigger = Trigger.getInstance();
+		trigger.stop();
+	}
+	
+	protected boolean isThreadDefault(Thread thread) {
+		String name = thread.getName();
+		if ( name.equals("Reference Handler") ||
+			 name.equals("Attach Listener") ||
+			 name.equals("Finalizer") ||
+			 name.equals("Timer-0") ||
+			 name.equals("DestroyJavaVM") ||
+			 name.equals("Signal Dispatcher"))
+			return true;
+		else
+			return false;
 	}
 	
 	protected void checkSchedule(long datetime) {
 		boolean running = preferences.getBoolean("running", false);
+		if (running == false) {
+			if (stepdown != Long.MAX_VALUE) {
+				if ((stepdown + downtime) < datetime) {
+					Map<Thread, StackTraceElement[]> mapThread = Thread.getAllStackTraces();
+					for (Iterator<Thread> threads = mapThread.keySet().iterator(); 
+							threads.hasNext();) {
+						Thread thread = threads.next();
+						//String thread_name = thread.getName();
+						if (! isThreadDefault(thread) ) {
+							logger.warning(message("TERMINATED thread(%d) name=\"%s\", status=\"%s\""
+									,thread.getId(), thread.getName(), thread.getState()));
+						}
+					}
+					System.exit(0xFF);
+				} else {
+					boolean process = false;
+					Map<Thread, StackTraceElement[]> mapThread = Thread.getAllStackTraces();
+					for (Iterator<Thread> threads = mapThread.keySet().iterator(); 
+							threads.hasNext();) {
+						Thread thread = threads.next();
+						//String thread_name = thread.getName();
+						if (! isThreadDefault(thread) ) {
+							logger.info(message("thread(%d) name=\"%s\", status=\"%s\"",
+									thread.getId(), thread.getName(), thread.getState()));
+							process = true;
+						}
+					}
+					if (!process)
+						System.exit(0);
+				}
+			} else {
+				stepdown = Calendar.getInstance().getTimeInMillis();
+			}
+			return;
+		}
 		//if (stepdown < datetime)
 		//	System.exit(0);
 		synchronized(doingList) {
@@ -155,7 +206,7 @@ public class Trigger extends Object {
 			}
 			doingList = queue;
 		}
-		if (running) {
+		//if (running) {
 			synchronized(todoList) {
 				Queue<Todo> queue = new LinkedList<Todo>();
 				while (todoList.size() != 0) {
@@ -170,14 +221,14 @@ public class Trigger extends Object {
 				}
 				todoList = queue;
 			}
-		} else if (stepdown != Long.MAX_VALUE) {
-			if ((stepdown + downtime) < datetime)
-				System.exit(0);
-			else if (doingList.size() == 0)
-				System.exit(0);
-		} else {
-			stepdown = Calendar.getInstance().getTimeInMillis();
-		}
+		//} else if (stepdown != Long.MAX_VALUE) {
+		//	if ((stepdown + downtime) < datetime)
+		//		System.exit(0);
+			//else if (doingList.size() == 0)
+			//	timer.cancel();
+		//} else {
+		//	stepdown = Calendar.getInstance().getTimeInMillis();
+		//}
 	}
 	
 	public void addTodo(Todo todo) {

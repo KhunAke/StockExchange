@@ -28,7 +28,6 @@ package com.javath.util;
 
 import java.io.*;
 import java.util.Date;
-import java.util.Properties;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 

@@ -6,10 +6,9 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+//import org.apache.commons.cli.PosixParser;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
@@ -26,6 +25,7 @@ public class Service implements Daemon {
 	@Override
 	public void init(DaemonContext dc) throws DaemonInitException, Exception {
 		System.out.println("initializing ...");
+		initVM_argument();
 	}
 
 	@Override
@@ -56,6 +56,7 @@ public class Service implements Daemon {
 			return;
 		}
 		CommandLineParser parser = new GnuParser();
+		//CommandLineParser parser = new PosixParser();
 		try {
 			CommandLine cmd = parser.parse( options, args);
 			if (cmd.hasOption("stop")) {

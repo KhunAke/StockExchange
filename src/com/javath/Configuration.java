@@ -12,11 +12,11 @@ import java.util.prefs.Preferences;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+//import org.apache.commons.cli.PosixParser;
 import org.apache.commons.codec.binary.Base64;
 
 import com.javath.util.AES;
@@ -122,8 +122,8 @@ public class Configuration {
 			Service.usage("Configuration",options);
 			return;
 		}
-		//CommandLineParser parser = new GnuParser();
-		CommandLineParser parser = new PosixParser();
+		CommandLineParser parser = new GnuParser();
+		//CommandLineParser parser = new PosixParser();
 		try {
 			CommandLine cmd = parser.parse( options, args);
 			if (cmd.hasOption("encrypt")) {
