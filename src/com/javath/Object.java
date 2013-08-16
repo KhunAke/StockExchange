@@ -94,7 +94,7 @@ public class Object {
 	}
 	
 	protected final String message(Throwable throwable) {
-		System.err.print(String.format("%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS %2$s %3$s ", 
+		System.err.print(String.format(Locale.US, "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS %2$s %3$s ", 
 				new Date(), classname, ClassID)); 
 		throwable.printStackTrace(System.err);
 		return String.format(ClassID + " %s", throwable);

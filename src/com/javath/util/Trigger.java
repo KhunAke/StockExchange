@@ -75,7 +75,8 @@ public class Trigger extends Object {
 						throw new ObjectException(ex);
 					}
 				}
-	        	todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index)));
+				todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
+	        	//todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index), downtime/pulserate));
 			}
 	        
 		} catch (FileNotFoundException e) { 
@@ -198,11 +199,18 @@ public class Trigger extends Object {
 			while (doingList.size() != 0) {
 				
 				Todo todo = doingList.poll();
-				if (todo.getState() != State.TERMINATED) 
+				if (todo.getState() != State.TERMINATED) {
 					queue.add(todo);
-				else
+					if ((todo.getDeathTime() != 0) && (todo.getDeathTime() <= datetime)) {
+							todo.stop();
+						logger.warning(message("Thread ID=%d, Name=%s : Life limit %d times",
+									todo.getId(), todo.getName(), todo.getLifeTimes()));
+					}
+				} else {
 					logger.fine(message("Triger(%d).TERMINATED Thread ID=%d, Name=%s, Queue(%d,%d)", datetime/pulserate,
 							todo.getId(), todo.getName(), todoList.size(), doingList.size()));
+				}
+				
 			}
 			doingList = queue;
 		}
@@ -211,7 +219,9 @@ public class Trigger extends Object {
 				Queue<Todo> queue = new LinkedList<Todo>();
 				while (todoList.size() != 0) {
 					Todo todo = todoList.poll();
-					if (todo.getSchedule() <= datetime) { 
+					if (todo.getSchedule() <= datetime) {
+						if (todo.getLifeTimes() != 0)
+							todo.setDeathTime(datetime + (todo.getLifeTimes() * pulserate)); 
 						todo.start();
 						logger.fine(message("Triger(%d).NEW Thread ID=%d, Name=%s, Queue(%d,%d)", datetime/pulserate,
 								todo.getId(), todo.getName(), todoList.size(), doingList.size() + 1));
@@ -231,12 +241,12 @@ public class Trigger extends Object {
 		//}
 	}
 	
-	public void addTodo(Todo todo) {
-		todoList.add(todo);
+	public boolean addTodo(Todo todo) {
+		return todoList.add(todo);
 	}
 	
-	public void removeTodo(Todo todo) {
-		todoList.remove(todo);
+	public boolean removeTodo(Todo todo) {
+		return todoList.remove(todo);
 	}
 	
 	public static void main(String[] args) {

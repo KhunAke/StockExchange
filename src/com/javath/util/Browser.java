@@ -57,6 +57,7 @@ public class Browser extends Object {
 	private static HttpHost defaultProxy;
 	private static Scheme http;
 	private static Scheme https;
+	private static int defaultTimeout;
 	
 	private URI uri;
 	private HttpClient httpClient;
@@ -68,10 +69,11 @@ public class Browser extends Object {
 	private String pathContent;
 	private String fileContent;
 	
-	private Header[] headers;
-	private String protocolVersion;
-	private int statusCode = 0;
-	private String reasonPhrase;
+	private HttpResponse httpResponse;
+	//private Header[] headers;
+	//private String protocolVersion;
+	//private int statusCode = 0;
+	//private String reasonPhrase;
 	private String contentType = "";
 	private String contentCharset = Charset.defaultCharset().toString();
 
@@ -95,6 +97,8 @@ public class Browser extends Object {
 					"localhost");
 			int port = Integer.parseInt(properties.getProperty("proxy.port",
 					"8080"));
+			defaultTimeout = Integer.parseInt(properties.getProperty("timeout",
+					"300000"));
 			if (hostname != null)
 				defaultProxy = new HttpHost(hostname, port);
 			setScheme();
@@ -112,12 +116,14 @@ public class Browser extends Object {
 		setContext(context);
 		proxyEnable(proxy);
 		setPathContent(path.tmp);
+		setTimeOut(defaultTimeout);
 	}
 	
 	public Browser(HttpHost proxy) {
 		getContext();
 		proxyEnable(proxy);
 		setPathContent(path.tmp);
+		setTimeOut(defaultTimeout);
 	}
 	
 	public Browser(HttpContext context) {
@@ -127,6 +133,7 @@ public class Browser extends Object {
 		else
 			proxyDisble();
 		setPathContent(path.tmp);
+		setTimeOut(defaultTimeout);
 	}
 
 	public Browser() {
@@ -136,6 +143,7 @@ public class Browser extends Object {
 		else
 			proxyDisble();
 		setPathContent(path.tmp);
+		setTimeOut(defaultTimeout);
 	}
 	
 	private static void setScheme() {
@@ -198,6 +206,10 @@ public class Browser extends Object {
 		return this;
 	}
 	
+	public void setTimeOut(int timeout) {
+		httpClient.getParams().setParameter("http.socket.timeout", timeout);
+	}
+	
 	private HttpClient getHttpClient() {
 		HttpClient httpClient = new DefaultHttpClient();
 		
@@ -256,7 +268,7 @@ public class Browser extends Object {
 			httpGet = new HttpGet(uri);
 			HttpResponse httpResponse = httpClient.execute(httpGet,
 					httpContext);
-			headers = httpResponse.getAllHeaders();
+			//headers = httpResponse.getAllHeaders();
 			this.setResponse(httpResponse);
 			HttpEntity httpEntity = httpResponse.getEntity();
 			if (httpEntity != null) {
@@ -295,7 +307,7 @@ public class Browser extends Object {
 
 			HttpResponse httpResponse = httpClient.execute(httpPost,
 					httpContext);
-			headers = httpResponse.getAllHeaders();
+			//headers = httpResponse.getAllHeaders();
 			this.setResponse(httpResponse);
 			HttpEntity httpEntity = httpResponse.getEntity();
 			if (httpEntity != null) {
@@ -362,25 +374,26 @@ public class Browser extends Object {
 	}
 	
 	public Header[] getHeaders() {
-		return headers;
+		return httpResponse.getAllHeaders();
 	}
 	
 	private void setResponse(HttpResponse httpResponse) {
-		protocolVersion = httpResponse.getProtocolVersion().toString();
-		statusCode = httpResponse.getStatusLine().getStatusCode();
-		reasonPhrase = httpResponse.getStatusLine().getReasonPhrase();
+		this.httpResponse = httpResponse;
+		//protocolVersion = httpResponse.getProtocolVersion().toString();
+		//statusCode = httpResponse.getStatusLine().getStatusCode();
+		//reasonPhrase = httpResponse.getStatusLine().getReasonPhrase();
 	}
 	
 	public String getProtocolVersion() {
-		return protocolVersion;
+		return httpResponse.getProtocolVersion().toString();
 	}
 
 	public int getStatusCode() {
-		return statusCode;
+		return httpResponse.getStatusLine().getStatusCode();
 	}
 
 	public String getReasonPhrase() {
-		return reasonPhrase;
+		return httpResponse.getStatusLine().getReasonPhrase();
 	}
 
 	private void setContentType(HttpEntity httpEntity) {
@@ -466,6 +479,7 @@ public class Browser extends Object {
 	
 	public void printHeaders() {
 		printStart("Headers");
+		Header[] headers = getHeaders();
 		for (int index = 0; index < headers.length; index++) {
 			System.out.printf("%s = '%s'%n", headers[index].getName(), headers[index].getValue()); 
 		}

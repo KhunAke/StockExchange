@@ -3,8 +3,6 @@ package com.javath.util.html;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.html.dom.HTMLDocumentImpl;
 import org.cyberneko.html.parsers.DOMFragmentParser;
@@ -19,28 +17,9 @@ import com.javath.Object;
 import com.javath.ObjectException;
 
 public class HtmlParser extends Object {
-	
-	private static Queue<HtmlParser> queue = new ConcurrentLinkedQueue<HtmlParser>();
-	
-	private DOMFragmentParser parser = new DOMFragmentParser();
-	private HTMLDocument document = new HTMLDocumentImpl();
+
 	private InputSource source;
-	
 	private DocumentFragment fragment;
-	
-	public static HtmlParser poll() {
-		HtmlParser parser = queue.poll();
-		if (parser == null)
-			parser = new HtmlParser(null);
-		else
-			parser.setInputStream(null);
-		return parser;
-	}
-	
-	public static void offer(HtmlParser parser) {
-		queue.offer(parser);
-		parser.setfragment(null);
-	}
 	
 	public HtmlParser(InputStream source) {
 		this.setInputStream(source);
@@ -55,10 +34,6 @@ public class HtmlParser extends Object {
 		return this;
 	}
 	
-	private void setfragment(DocumentFragment fragment) {
-		this.fragment = fragment;
-	}
-	
 	public HtmlParser setInputStream(InputStream source, String charset) {
 		this.source = new InputSource(source);
         this.source.setEncoding(charset);
@@ -66,12 +41,15 @@ public class HtmlParser extends Object {
 		return this;
 	}
 	
-	
 	public DocumentFragment parse() {
 		try {
+			DOMFragmentParser parser = new DOMFragmentParser();
+			HTMLDocument document = new HTMLDocumentImpl();
+			
 			if (fragment == null) {
 				fragment = document.createDocumentFragment();
 				parser.parse(source, fragment);
+				source = null;
 			}
 			//travel(null,fragment);
 			return fragment;

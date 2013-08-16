@@ -79,4 +79,9 @@ public class File {
 		return new FileInputStream(new java.io.File(filename));
 	}
 	
+	public boolean delete(String filename) {
+		java.io.File file = new java.io.File(filename);
+		return file.delete();
+	}
+	
 }

@@ -1,5 +1,7 @@
 package com.javath;
 
+import java.util.Date;
+import java.util.Locale;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -19,18 +21,18 @@ public class Service implements Daemon {
 
 	@Override
 	public void destroy() {
-		System.out.println("done.");
+		System.out.println(time() + "Done.");
 	}
 
 	@Override
 	public void init(DaemonContext dc) throws DaemonInitException, Exception {
-		System.out.println("initializing ...");
+		System.out.println(time() + "Initializing ...");
 		initVM_argument();
 	}
 
 	@Override
 	public void start() throws Exception {
-		System.out.println("starting ...");
+		System.out.println(time() + "Starting ...");
 		Trigger trigger = Trigger.getInstance();
 		trigger.start();
 	}
@@ -39,7 +41,11 @@ public class Service implements Daemon {
 	public void stop() throws Exception {
 		Trigger trigger = Trigger.getInstance();
 		trigger.stop();
-		System.out.println("stopping ...");
+		System.out.println(time() + "Stopping ...");
+	}
+	
+	private String time() {
+		return String.format(Locale.US ,"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS ", new Date());
 	}
 	
 	public static void main(String[] args) {
@@ -73,7 +79,7 @@ public class Service implements Daemon {
 	
 	private static void initVM_argument() {
 		Properties system = System.getProperties();
-		String vm_argument = null;
+		String vm_argument = null; // variable temporary 
 		vm_argument = System.getProperty("java.naming.factory.initial");
 		if (vm_argument == null)
 			system.setProperty("java.naming.factory.initial", "com.javath.ContextFactory");

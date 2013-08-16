@@ -23,10 +23,6 @@ public abstract class Filter extends Object {
 		return this;
 	}
 	
-	public Node getNode() {
-		return node;
-	}
-	
 	public List<Node> filter() {
 		return filter(-1);
 	}
@@ -36,6 +32,7 @@ public abstract class Filter extends Object {
 			nodes = new LinkedList<Node>();
 			synchronized(nodes) {
 				this.scan(node, depth);
+				node = null;
 			}
 		}
 		return nodes;

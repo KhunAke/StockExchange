@@ -28,6 +28,7 @@ package com.javath.util;
 
 import java.io.*;
 import java.util.Date;
+import java.util.Locale;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
@@ -159,13 +160,14 @@ public class LoggingFormatter extends Formatter {
             pw.close();
             throwable = sw.toString();
         }
-        return String.format(format,
-                             dat,
-                             source,
-                             record.getLoggerName(),
-                             record.getLevel().getLocalizedName(),
-                             //record.getLevel().getLocalizedLevelName(),
-                             message,
-                             throwable);
+        return String.format(Locale.US, 
+        					format,
+                            dat,
+                            source,
+                            record.getLoggerName(),
+                            record.getLevel().getLocalizedName(),
+                            //record.getLevel().getLocalizedLevelName(),
+                            message,
+                            throwable);
     }
 }
