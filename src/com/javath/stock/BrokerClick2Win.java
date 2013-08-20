@@ -1,20 +1,30 @@
 package com.javath.stock;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
 
 
+
+import java.util.Properties;
 
 import org.apache.http.client.fluent.Form;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
+import com.javath.Configuration;
+import com.javath.ObjectException;
 import com.javath.stock.settrade.FlashStreaming;
+import com.javath.stock.settrade.Market;
 import com.javath.util.Browser;
 import com.javath.util.html.FormFilter;
 import com.javath.util.html.HtmlParser;
 import com.javath.util.html.InputFilter;
 
 public class BrokerClick2Win extends FlashStreaming {
+	
+	private static String defaultUserName;
 	
 	private String username;
 	private String password;
@@ -28,12 +38,45 @@ public class BrokerClick2Win extends FlashStreaming {
 	
 	//protected Browser browser;
 	
+	static {
+		try {
+			Properties properties = new Properties();
+
+			String configuration = path.etc + file.separator
+					+ "click2win.properties";
+			FileInputStream propsFile = new FileInputStream(
+					Configuration.getProperty("configuration.broker.settrade",
+							configuration));
+			properties.load(propsFile);
+			defaultUserName = properties.getProperty("default");
+			int numberOfAccount = Integer.valueOf(properties.getProperty("number_of_account","0"));
+			for (int index = 0; index < numberOfAccount; index++) {
+				String username = properties.getProperty("username." + (index+1));
+				String password = Configuration.decrypt(properties.getProperty("password." + (index+1)));
+				BrokerClick2Win broker = new BrokerClick2Win(username, password);
+				putBroker(username, broker);
+			}
+			propsFile.close();
+			
+		} catch (FileNotFoundException e) {
+			//logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			//logger.severe(message(e));
+			throw new ObjectException(e);
+		}
+	}
 	
 	protected void url_init() {
 		url_synctime = "https://click2win.settrade.com/realtime/streaming4/synctime.jsp";
 		url_seos = "https://click2win.settrade.com/daytradeflex/streamingSeos.jsp";
 		url_dataprovider = "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProvider.jsp";
 		url_dataproviderbinary = "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
+	}
+	
+	public static BrokerClick2Win getInstance() {
+		return (BrokerClick2Win) getBroker(defaultUserName, 
+				BrokerClick2Win.class.getCanonicalName());
 	}
 	
 	public BrokerClick2Win(String username, String password) {

@@ -1,5 +1,6 @@
 package com.javath.stock.set;
 
+import java.io.InputStream;
 import java.util.List;
 
 import org.w3c.dom.Node;
@@ -35,10 +36,9 @@ public class CompanyFinancial extends Object implements Runnable, CustomHandler 
 	
 	private void getWebPage() {
 		Browser browser = new Browser();
-		HtmlParser parser = HtmlParser.poll();
-		
-		parser.setInputStream(
-			browser.get("http://www.settrade.com/C04_03_stock_companyhighlight_p1.jsp?txtSymbol=PTT&selectPage=3"));
+		InputStream inputStream = browser.get("http://www.settrade.com/C04_03_stock_companyhighlight_p1.jsp?txtSymbol=PTT&selectPage=3");
+		HtmlParser parser = new HtmlParser(inputStream);
+	
 		//	browser.get("http://www.set.or.th/set/companyhighlight.do?symbol=PTT&language=en&country=US"));
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		CustomFilter filter = new CustomFilter(parser.parse());
@@ -72,7 +72,6 @@ public class CompanyFinancial extends Object implements Runnable, CustomHandler 
 				textNode.printStringArray(stringArray);
 			}
 		}
-		HtmlParser.offer(parser);
 	}
 
 	@Override

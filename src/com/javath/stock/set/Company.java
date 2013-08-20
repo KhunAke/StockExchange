@@ -9,7 +9,7 @@ import org.hibernate.SessionFactory;
 import com.javath.Object;
 import com.javath.mapping.SetCompany;
 import com.javath.mapping.SetCompanyHome;
-import com.javath.stock.settrade.Index;
+import com.javath.stock.settrade.Market;
 import com.javath.util.Browser;
 import com.javath.util.html.HtmlParser;
 import com.javath.util.html.TextNode;
@@ -61,7 +61,7 @@ public class Company extends Object implements Runnable {
 			} else if (stringArray[0].equals("5")) {
 				//textNode.printStringArray(index);
 				try {
-					date = Index.castDate("dd MMM yyyy", stringArray[1].substring(6));
+					date = Market.castDate("dd MMM yyyy", stringArray[1].substring(6));
 				} catch (ParseException e) {
 					logger.severe(message(e));
 				}

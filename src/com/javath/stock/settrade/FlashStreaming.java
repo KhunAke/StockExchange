@@ -320,6 +320,45 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		form.add("mode", mode);
 		String[] services = service.split(",");
 		for (int index = 0; index < services.length; index++) {
+			Streaming4 streaming4 = Streaming4.getService(services[index]);
+			switch (streaming4) {
+			case S4MarketSummary:
+				break;
+			case S4InstrumentTicker:
+				form.add("newMarket", newMarket);
+				form.add("newInstTicker", newInstTicker);
+				form.add("sequenceId", sequenceId);
+				form.add("oldMarket", oldMarket);
+				form.add("oldInstTicker", oldInstTicker);
+				oldMarket = "";
+				oldInstTicker = "";
+				break;
+			case S4InstrumentInfo:
+				form.add("initiatedFlag", initiatedFlag);
+				form.add("newInstInfo", newInstInfo);
+				form.add("oldInstInfo", oldInstInfo);
+				oldInstInfo = "";
+				break;
+			case S4MarketTicker:
+				logger.finest(message("sequenceId2=\"%s\", optionSequenceId2=\"%s\"",sequenceId2,optionSequenceId2));
+				if (newMarket2.equals("A") || newMarket2.equals("D"))
+					form.add("optionSequenceId2", optionSequenceId2);
+				if (newMarket2.equals("A") || newMarket2.equals("E"))
+					form.add("sequenceId2", sequenceId2);
+				form.add("newMarket2", newMarket2);
+				form.add("newInstTicker2", newInstTicker2);
+				form.add("newSum2", newSum2);
+				form.add("oldMarket2", oldMarket2);
+				form.add("oldInstTicker2", oldInstTicker2);
+				form.add("oldSum2", oldSum2);
+				oldMarket2 = "";
+				oldInstTicker2 = "";
+				oldSum2 = "";
+				break;
+			default:
+				logger.warning(message("Unknow service \"%s\"",services[index]));
+				break;
+			}
 			/**
 			switch (services[index]) {
 			case MarketSummary:
@@ -518,7 +557,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}	
 	}
 	
-	protected String runService = String.format("%s,%s", MarketSummary, MarketTicker);
+	protected String runService = String.format("%s,%s", Streaming4.S4MarketSummary, Streaming4.S4MarketTicker);
 	protected String runInstInfo = "";
 	protected String runInstTicker = "";
 	protected String runMarket = "";
@@ -594,8 +633,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			setNewSum2(runSum2);
 			dataProviderBinary(runService);
 			// new Thread
-			getInstrumentInfo(dataBinary.getSymbolDate());
-			
+			//getInstrumentInfo(dataBinary.getSymbolDate());
 		} catch (Exception e) {
 			logger.severe(message(e));
 		} finally {
@@ -612,6 +650,6 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		//trigger.start();
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
-				this.getClass().getSimpleName(), time)));
+				this.getClass().getSimpleName(), time, 5)));
 	}
 }

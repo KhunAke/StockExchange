@@ -1,5 +1,7 @@
 package com.javath.stock.settrade;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Date;
 import java.util.List;
 
@@ -8,6 +10,7 @@ import org.hibernate.SessionFactory;
 import org.w3c.dom.Node;
 
 import com.javath.Object;
+import com.javath.ObjectException;
 import com.javath.mapping.SettradeBoard;
 import com.javath.mapping.SettradeBoardHome;
 import com.javath.mapping.SettradeBoardId;
@@ -18,71 +21,84 @@ import com.javath.util.html.HtmlParser;
 import com.javath.util.html.TextNode;
 
 public class Board extends Object implements Runnable, CustomHandler {
-	private Browser browser = new Browser();
-	private HtmlParser parser;
-	//private CustomFilter filter;
 	
+	private Browser browser;
 	private Date date;
 	
 	public Board(Date date) {
+		this.browser = new Browser();
 		this.date = date;
-		//filter = new CustomFilter(null);
 	}
 	
+	private Date getDateTime() {
+		return this.date;
+	}
+	
+	@Override
 	public boolean condition(Node node) {
 		try {
 			if (node.getNodeName().equals("DIV"))
 				return HtmlParser.attribute(node, "class").equals("divDetailBox");
-			} catch (NullPointerException e) {
-				return false;
-			}
+		} catch (NullPointerException e) {
 			return false;
+		}
+		return false;
 	}
-	
+
+	@Override
 	public void run() {
 		try {
-			parser = HtmlParser.poll();
-			this.getWebPage();
-		} catch (Exception e) {
+			getWebPage();
+			file.delete(browser.getFileContent());
+		} catch (Exception e){
+			logger.severe(message(e));
+		} catch (ThreadDeath e) {
 			logger.severe(message(e));
 		} finally {
-			HtmlParser.offer(parser);
-			parser = null;
 		}
 	}
 	
-	public void getWebPage() {
-		parser.setInputStream(
-				browser.get("http://www.settrade.com/C13_MarketSummaryStockMethod.jsp?method=AOM"));
-		logger.info(message("{%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS} Cache in \"%2$s\"", this.date, browser.getFileContent()));
-		Index set = Index.getInstance();
-		if (!this.date.equals(set.getDateTime())) {
-			logger.warning(message("Server delayed because request of \"%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS\" but received of \"%2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$tS\"",
-					this.date,  set.getDateTime()));
-		}
-		
-		CustomFilter filter = new CustomFilter(parser.parse());
-		filter.setHandler(this);
-		//filter.setNode(parser.parse());
-		List<Node> nodes = filter.filter(3);
-		TextNode textNode = null;
+	private void getWebPage() {
+		InputStream inputStream = null;
 		try {
-			textNode =new TextNode(nodes.get(0));
-		} catch (java.lang.IndexOutOfBoundsException e) {
-			logger.severe(message("Node not found"));
-			return;
-		}
-		
-		for (int index = 1; index < textNode.length(); index++) {
-			String[] stringArray = textNode.getStringArray(index);
-			if (stringArray[0].equals("2") && (stringArray[2].length() > 0)) {
-				//textNode.printStringArray(stringArray);
-				String[] symbolArray = textNode.getStringArray(index + 1);
-				//textNode.printStringArray(symbolArray);
-				this.store(symbolArray, stringArray);
+			inputStream = browser.get("http://www.settrade.com/C13_MarketSummaryStockMethod.jsp?method=AOM");
+			HtmlParser parser = new HtmlParser(inputStream);		
+			logger.info(message("{%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS} Cache in \"%2$s\"", this.date, browser.getFileContent()));
+			Market set = Market.getInstance();
+			if (!this.date.equals(set.getDate())) {
+				logger.warning(message("Server delayed because request of \"%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS\" but received of \"%2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$tS\"",
+						this.date,  set.getDate()));
+			}
+			CustomFilter filter = new CustomFilter(parser.parse());
+			filter.setHandler(this);
+			List<Node> nodes = filter.filter(3);
+			TextNode textNode = null;
+			
+			try {
+				textNode =new TextNode(nodes.get(0));
+			} catch (java.lang.IndexOutOfBoundsException e) {
+				logger.severe(message(e));
+				throw new ObjectException(e);
+			}
+			
+			for (int index = 1; index < textNode.length(); index++) {
+				String[] stringArray = textNode.getStringArray(index);
+				if (stringArray[0].equals("2") && (stringArray[2].length() > 0)) {
+					//textNode.printStringArray(stringArray);
+					String[] symbolArray = textNode.getStringArray(index + 1);
+					//textNode.printStringArray(symbolArray);
+					store(symbolArray, stringArray);
+				}
+			}
+		} finally {
+			try {
+				if (inputStream != null)
+					inputStream.close();
+			} catch (IOException e) {
+				logger.severe(message(e));
+				throw new ObjectException(e);
 			}
 		}
-		//textNode.print();
 	}
 	
 	private void store(String[] symbol,String[] data) {
@@ -94,28 +110,28 @@ public class Board extends Object implements Runnable, CustomHandler {
 		id.setDate(this.getDateTime());
 		//id.setTime(this.getTime());
 		try {
-			board.setOpen(Index.castFloat(data[4]));
+			board.setOpen(Market.castFloat(data[4]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setHigh(Index.castFloat(data[6]));
+			board.setHigh(Market.castFloat(data[6]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setLow(Index.castFloat(data[8]));
+			board.setLow(Market.castFloat(data[8]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setLast(Index.castFloat(data[10]));
+			board.setLast(Market.castFloat(data[10]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setBid(Index.castFloat(data[16]));
+			board.setBid(Market.castFloat(data[16]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setOffer(Index.castFloat(data[18]));
+			board.setOffer(Market.castFloat(data[18]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setVolume(Index.castLong(data[20]));
+			board.setVolume(Market.castLong(data[20]));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setValue(Index.castDouble(data[22]));
+			board.setValue(Market.castDouble(data[22]));
 		} catch (java.lang.NumberFormatException e) {}
 		
 		Session session = ((SessionFactory) this.getContext("SessionFactory"))
@@ -130,16 +146,5 @@ public class Board extends Object implements Runnable, CustomHandler {
 					id.getSymbol() , id.getDate(), e.getErrorCode(), e.getSQLState(), e.getMessage()));
 			session.getTransaction().rollback();
 		} 
-		/**
-		 * 
-		 */
-		//Quote quote = Quote.getInstance(id.getSymbol());
-		//quote.change(board);
 	}
-	
-	private Date getDateTime() {
-		//String data =  String.format(Locale.US,"%1$tY-%1$tm-%1$td", date);
-		return this.date;
-	}
-	
 }

@@ -1,5 +1,6 @@
 package com.javath.stock.settrade;
 
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -92,13 +93,12 @@ public class Quote extends Object implements Runnable, CustomHandler {
 	public void getWebPage(int again) {
 		// TODO Auto-generated method stub
 		Browser browser = new Browser();
-		HtmlParser parser = HtmlParser.poll();
-		
+		HtmlParser parser = null;
 		try {
 			String txtSymbol = URLEncoder.encode(symbol,Charset.defaultCharset().name());
-			parser.setInputStream(
-				browser.get(String.format("http://www.settrade.com/C04_01_stock_quote_p1.jsp?txtSymbol=%s&selectPage=1",
-						txtSymbol)));
+			InputStream inputStream = browser.get(String.format("http://www.settrade.com/C04_01_stock_quote_p1.jsp?txtSymbol=%s&selectPage=1",
+						txtSymbol));
+			parser = new HtmlParser(inputStream);
 			//logger.info(message("http://www.settrade.com/C04_01_stock_quote_p1.jsp?txtSymbol=%s&selectPage=1", txtSymbol));
 			logger.info(message("{%s.%d} Cache in \"%s\"", symbol, again, browser.getFileContent()));
 		} catch (UnsupportedEncodingException e) {
@@ -134,7 +134,7 @@ public class Quote extends Object implements Runnable, CustomHandler {
 		
 		id.setSymbol(symbol);
 		try {
-			id.setDate(Index.castDate("ข้อมูลล่าสุด dd/MM/yyyy HH:mm:ss",textNode.getString(2, 4)));
+			id.setDate(Market.castDate("ข้อมูลล่าสุด dd/MM/yyyy HH:mm:ss",textNode.getString(2, 4)));
 		} catch (ParseException e) {
 			logger.warning(message(e));
 			Calendar calendar = Calendar.getInstance();
@@ -144,22 +144,22 @@ public class Quote extends Object implements Runnable, CustomHandler {
 			id.setDate(calendar.getTime());
 		}
 		try {
-			board.setLast(Index.castFloat(textNode.getString(7,8)));
+			board.setLast(Market.castFloat(textNode.getString(7,8)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setOpen(Index.castFloat(textNode.getString(25,4)));
+			board.setOpen(Market.castFloat(textNode.getString(25,4)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setHigh(Index.castFloat(textNode.getString(30,4)));
+			board.setHigh(Market.castFloat(textNode.getString(30,4)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setLow(Index.castFloat(textNode.getString(35,4)));
+			board.setLow(Market.castFloat(textNode.getString(35,4)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setVolume(Index.castLong(textNode.getString(22,4)));
+			board.setVolume(Market.castLong(textNode.getString(22,4)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
-			board.setValue(Index.castDouble(textNode.getString(27,4)));
+			board.setValue(Market.castDouble(textNode.getString(27,4)));
 		} catch (java.lang.NumberFormatException e) {}
 		
 		boolean loopVolume = true;
@@ -168,16 +168,16 @@ public class Quote extends Object implements Runnable, CustomHandler {
 			if  (textNode.getString(index, 2).equals("ปริมาณเสนอซื้อ")) {
 				index += 1;
 				try {
-					board.setBid(Index.castFloat(textNode.getString(index,4)));
+					board.setBid(Market.castFloat(textNode.getString(index,4)));
 				} catch (java.lang.NumberFormatException e) {}
 				try {
-					board.setBidVolume(Index.castLong(textNode.getString(index,2)));
+					board.setBidVolume(Market.castLong(textNode.getString(index,2)));
 				} catch (java.lang.NumberFormatException e) {}
 				try {
-					board.setOffer(Index.castFloat(textNode.getString(index,6)));
+					board.setOffer(Market.castFloat(textNode.getString(index,6)));
 				} catch (java.lang.NumberFormatException e) {}
 				try {
-					board.setOfferVolume(Index.castLong(textNode.getString(index,8)));
+					board.setOfferVolume(Market.castLong(textNode.getString(index,8)));
 				} catch (java.lang.NumberFormatException e) {}
 				break;
 			} else
@@ -185,8 +185,6 @@ public class Quote extends Object implements Runnable, CustomHandler {
 		}
 		
 		this.store(board);
-
-		HtmlParser.offer(parser);
 	}
 	
 	private void store(SettradeBoard board) {

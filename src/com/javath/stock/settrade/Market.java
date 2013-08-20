@@ -92,7 +92,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 		}
 	}
 	
-	public synchronized void getWebPage() {
+	private synchronized void getWebPage() {
 		InputStream inputStream = null;
 		try {
 			inputStream = browser.get("http://www.settrade.com/C13_MarketSummary.jsp?detail=SET");
@@ -136,9 +136,11 @@ public class Market extends Object implements Runnable, CustomHandler {
 			} else {
 				this.date = date;
 				/** Thread of Board **/
-				//new Thread(new Board(date), 
-				//		String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date))
-				//	.start();
+				//newThread(String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date), 
+				//		new Board(date), "run");
+				new Thread(new Board(date), 
+						String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date))
+					.start();
 			}
 			
 			for (int index = 1; index < textNode.length(); index++) {
@@ -295,7 +297,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 		
 		
 		Trigger trigger = Trigger.getInstance();
-		logger.fine(message("Last Update \"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS\" -> Next Task \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", this.date,  time));	
+		logger.info(message("Last Update \"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS\" -> Next Task \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", this.date,  time));	
 		//trigger.start();
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 

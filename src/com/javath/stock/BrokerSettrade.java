@@ -12,7 +12,6 @@ import org.apache.http.client.fluent.Form;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
-import com.javath.Object;
 import com.javath.Configuration;
 import com.javath.ObjectException;
 import com.javath.util.Browser;
@@ -43,18 +42,22 @@ public class BrokerSettrade extends Broker{
 			Properties properties = new Properties();
 
 			String configuration = path.etc + file.separator
-					+ "brokersettrade.properties";
+					+ "settrade.properties";
 			FileInputStream propsFile = new FileInputStream(
-					Configuration.getProperty("configuration.set.brokersettrade",
+					Configuration.getProperty("configuration.broker.settrade",
 							configuration));
+			String username = properties.getProperty("username");
+			String password = Configuration.decrypt(properties.getProperty("password"));
 			properties.load(propsFile);
 			propsFile.close();
 			
 			
 		} catch (FileNotFoundException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
-			e.printStackTrace(System.err);
+			//logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 

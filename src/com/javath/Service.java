@@ -77,7 +77,7 @@ public class Service implements Daemon {
 
 	}
 	
-	private static void initVM_argument() {
+	public static void initVM_argument() {
 		Properties system = System.getProperties();
 		String vm_argument = null; // variable temporary 
 		vm_argument = System.getProperty("java.naming.factory.initial");

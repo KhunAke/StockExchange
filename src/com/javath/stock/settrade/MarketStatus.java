@@ -65,19 +65,19 @@ public enum MarketStatus {
 	public static MarketStatus getStatus(String status) {
 		if (status.equals("Pre-Open(I)"))
 			return PreOpen_I;
-		if (status.equals("Open(I)"))
+		else if (status.equals("Open(I)"))
 			return Open_I;
-		if (status.equals("Intermission"))
+		else if (status.equals("Intermission"))
 			return Intermission;
-		if (status.equals("Pre-Open(II)"))
+		else if (status.equals("Pre-Open(II)"))
 			return PreOpen_II;
-		if (status.equals("Open(II)"))
+		else if (status.equals("Open(II)"))
 			return Open_II;
-		if (status.equals("Pre-close"))
+		else if (status.equals("Pre-close"))
 			return PreClose;
-		if (status.equals("OffHour"))
+		else if (status.equals("OffHour"))
 			return OffHour;
-		if (status.equals("Closed"))
+		else if (status.equals("Closed"))
 			return Closed;
 		else
 			return Unknow;

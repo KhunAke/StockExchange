@@ -54,26 +54,10 @@ public class Trigger extends Object {
 	        	Runnable runnable = null;
 				try {
 					runnable = classRunnable.newInstance();
+				} catch (InstantiationException e) {
+					runnable = invoke_getInstance(classRunnable);
 				} catch (IllegalAccessException e) {
-					try {
-						Method method = classRunnable.getDeclaredMethod("getInstance");
-						runnable = (Runnable) method.invoke(null);
-					} catch (SecurityException ex) {
-						//logger.severe(message(ex));
-						throw new ObjectException(ex);
-					} catch (NoSuchMethodException ex) {
-						//logger.severe(message(ex));
-						throw new ObjectException(ex);
-					} catch (IllegalArgumentException ex) {
-						//logger.severe(message(ex));
-						throw new ObjectException(ex);
-					} catch (IllegalAccessException ex) {
-						//logger.severe(message(ex));
-						throw new ObjectException(ex);
-					} catch (InvocationTargetException ex) {
-						//logger.severe(message(ex));
-						throw new ObjectException(ex);
-					}
+					runnable = invoke_getInstance(classRunnable);
 				}
 				todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
 	        	//todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index), downtime/pulserate));
@@ -88,12 +72,30 @@ public class Trigger extends Object {
 		} catch (ClassNotFoundException e) {
 			//logger.severe(message(e));
 			throw new ObjectException(e);
-		} catch (InstantiationException e) {
-			//logger.severe(message(e));
-			throw new ObjectException(e);
-		} 
-		
+		}
     }
+	
+	private static Runnable invoke_getInstance(Class<Runnable> classRunnable) {
+		try {
+			Method method = classRunnable.getDeclaredMethod("getInstance");
+			return (Runnable) method.invoke(null);
+		} catch (SecurityException ex) {
+			//logger.severe(message(ex));
+			throw new ObjectException(ex);
+		} catch (NoSuchMethodException ex) {
+			//logger.severe(message(ex));
+			throw new ObjectException(ex);
+		} catch (IllegalArgumentException ex) {
+			//logger.severe(message(ex));
+			throw new ObjectException(ex);
+		} catch (IllegalAccessException ex) {
+			//logger.severe(message(ex));
+			throw new ObjectException(ex);
+		} catch (InvocationTargetException ex) {
+			//logger.severe(message(ex));
+			throw new ObjectException(ex);
+		}
+	}
 	
 	private Trigger() {
 		preferences = Configuration.getPreferenceNode(this.getClassName().replace('.', '/'));
