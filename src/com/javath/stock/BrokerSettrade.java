@@ -9,6 +9,7 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.apache.http.client.fluent.Form;
+import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
@@ -108,7 +109,7 @@ public class BrokerSettrade extends Broker{
 		return form;
 	}
 	
-	public void login() {
+	public HttpContext login(Browser browser) {
 		Form form = null;
 		for (int state = 0; state < login_state.length; state++) {
 			if (form == null)
@@ -124,7 +125,7 @@ public class BrokerSettrade extends Broker{
 			if (browser.getStatusCode() != 200) {
 				logger.severe(message("State-%d HTTP Response %d %s", 
 						state, browser.getStatusCode(), browser.getReasonPhrase()));
-				return;
+				return null;
 			}
 				
 			formFilter.setNode(parser.parse()).filter();
@@ -136,7 +137,7 @@ public class BrokerSettrade extends Broker{
 					form = formFilter.actionForm(login_state[state + 1]);
 				if (form == null) {
 					logger.severe(message("State-%d FORM not found.", state));
-					return;
+					return null;
 				}
 						
 			} else if ((state + 1) == login_state.length) {
@@ -145,6 +146,7 @@ public class BrokerSettrade extends Broker{
 				browser.printContent();
 			}
 		}
+		return null;
 	}
 	
 	public void portfolio() {

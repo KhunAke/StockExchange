@@ -3,7 +3,10 @@ package com.javath.stock;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.http.protocol.HttpContext;
+
 import com.javath.Object;
+import com.javath.util.Browser;
 
 public abstract class Broker extends Object {
 	
@@ -20,10 +23,25 @@ public abstract class Broker extends Object {
 				broker);
 	}
 	
-	public abstract void login();
+	protected Browser browser;
+	protected HttpContext httpContext;
+	
+	public abstract HttpContext login(Browser browser);
 	public abstract void portfolio();
 	public abstract void buy(String symbol, double price, long volume);
 	public abstract void sell(String symbol, double price, long volume); 
 	public abstract void cancel(String symbol,  String orderNo);
+
+	public HttpContext getHttpContext() {
+		synchronized (httpContext) {
+			return httpContext;
+		}
+	}
+
+	public void setHttpContext(HttpContext httpContext) {
+		synchronized (httpContext) {
+			this.httpContext = httpContext;
+		}
+	}
 	
 }

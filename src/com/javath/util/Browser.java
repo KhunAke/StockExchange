@@ -69,8 +69,6 @@ public class Browser extends Object {
 	private String pathContent;
 	private String fileContent;
 	
-	private volatile Browser lock = this;
-	
 	private HttpResponse httpResponse;
 	//private Header[] headers;
 	//private String protocolVersion;
@@ -189,8 +187,11 @@ public class Browser extends Object {
 		pathContent = path;
 	}
 	
-	private void setContext(HttpContext httpContext) {
-		 this.httpContext = httpContext;
+	public void setContext(HttpContext httpContext) {
+		if (httpContext == null)
+			this.httpContext = getContext();
+		else
+			this.httpContext = httpContext;
 	}
 	
 	public HttpContext getContext() {
@@ -262,81 +263,76 @@ public class Browser extends Object {
 	
 	public InputStream get(String request) {
 		// TODO HTTP request method get()
-		synchronized (lock) {
-			InputStream inputStream = null;
-			HttpGet httpGet = null;
-	
-			try {
-				setURI(request);
-				httpGet = new HttpGet(uri);
-				HttpResponse httpResponse = httpClient.execute(httpGet,
-						httpContext);
-				//headers = httpResponse.getAllHeaders();
-				this.setResponse(httpResponse);
-				HttpEntity httpEntity = httpResponse.getEntity();
-				if (httpEntity != null) {
-					this.setContentType(httpEntity);
-					inputStream = httpEntity.getContent();
-					inputStream = saveContent(uri, inputStream);
-					//return saveContent(uri, inputStream);
-				}
-			} catch (ClientProtocolException e) {
-				logger.severe(message(e));
-				throw new ObjectException(e);
-			} catch (IOException e) {
-				logger.severe(message(e));
-				throw new ObjectException(e);
-			} finally {
-				httpGet.abort();
+		InputStream inputStream = null;
+		HttpGet httpGet = null;
+
+		try {
+			setURI(request);
+			httpGet = new HttpGet(uri);
+			HttpResponse httpResponse = httpClient.execute(httpGet,
+					httpContext);
+			//headers = httpResponse.getAllHeaders();
+			this.setResponse(httpResponse);
+			HttpEntity httpEntity = httpResponse.getEntity();
+			if (httpEntity != null) {
+				this.setContentType(httpEntity);
+				inputStream = httpEntity.getContent();
+				inputStream = saveContent(uri, inputStream);
+				//return saveContent(uri, inputStream);
 			}
-			return inputStream;
+		} catch (ClientProtocolException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} finally {
+			httpGet.abort();
 		}
+		return inputStream;
 	}
 
 	public InputStream head(String request) {
 		// TODO HTTP request method head()
-		synchronized (lock) {
-			throw newObjectException(ERROR_NOT_SUPPORT);
-		}
+		throw newObjectException(ERROR_NOT_SUPPORT);
+		
 	}
 
 	public InputStream post(String request, List<NameValuePair> form) {
 		// TODO HTTP request method post()
-		synchronized (lock) {
-			InputStream inputStream = null;
-			HttpPost httpPost = null;
-	
-			try {
-				setURI(request);
-				httpPost = new HttpPost(uri);
-				UrlEncodedFormEntity entity = new UrlEncodedFormEntity(form);
-				httpPost.setEntity(entity);
-	
-				HttpResponse httpResponse = httpClient.execute(httpPost,
-						httpContext);
-				//headers = httpResponse.getAllHeaders();
-				this.setResponse(httpResponse);
-				HttpEntity httpEntity = httpResponse.getEntity();
-				if (httpEntity != null) {
-					this.setContentType(httpEntity);
-					inputStream = httpEntity.getContent();
-					inputStream = saveContent(uri, inputStream);
-					//return saveContent(uri, inputStream);
-				}
-			} catch (UnsupportedEncodingException e) {
-				logger.severe(message(e));
-				throw new ObjectException(e);
-			} catch (ClientProtocolException e) {
-				logger.severe(message(e));
-				throw new ObjectException(e);
-			} catch (IOException e) {
-				logger.severe(message(e));
-				throw new ObjectException(e);
-			} finally {
-				httpPost.abort();
+		InputStream inputStream = null;
+		HttpPost httpPost = null;
+
+		try {
+			setURI(request);
+			httpPost = new HttpPost(uri);
+			UrlEncodedFormEntity entity = new UrlEncodedFormEntity(form);
+			httpPost.setEntity(entity);
+
+			HttpResponse httpResponse = httpClient.execute(httpPost,
+					httpContext);
+			//headers = httpResponse.getAllHeaders();
+			this.setResponse(httpResponse);
+			HttpEntity httpEntity = httpResponse.getEntity();
+			if (httpEntity != null) {
+				this.setContentType(httpEntity);
+				inputStream = httpEntity.getContent();
+				inputStream = saveContent(uri, inputStream);
+				//return saveContent(uri, inputStream);
 			}
-			return inputStream;
+		} catch (UnsupportedEncodingException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (ClientProtocolException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} finally {
+			httpPost.abort();
 		}
+		return inputStream;
 	}
 
 	public InputStream post(String request, Form form) {
@@ -345,30 +341,22 @@ public class Browser extends Object {
 
 	public InputStream put(String request) {
 		// TODO HTTP request method put()
-		synchronized (lock) {
-			throw newObjectException(ERROR_NOT_SUPPORT);
-		}
+		throw newObjectException(ERROR_NOT_SUPPORT);
 	}
 
 	public InputStream delete(String request) {
 		// TODO HTTP request method delete()
-		synchronized (lock) {
-			throw newObjectException(ERROR_NOT_SUPPORT);
-		}
+		throw newObjectException(ERROR_NOT_SUPPORT);
 	}
 
 	public InputStream trace(String request) {
 		// TODO HTTP request method trace()
-		synchronized (lock) {
-			throw newObjectException(ERROR_NOT_SUPPORT);
-		}
+		throw newObjectException(ERROR_NOT_SUPPORT);
 	}
 
 	public InputStream option(String request) {
 		// TODO HTTP request method option()
-		synchronized (lock) {
-			throw newObjectException(ERROR_NOT_SUPPORT);
-		}
+		throw newObjectException(ERROR_NOT_SUPPORT);
 	}
 	
 	public InputStream getInputStream() {

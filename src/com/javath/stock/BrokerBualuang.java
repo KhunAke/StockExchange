@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.http.client.fluent.Form;
+import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
@@ -56,7 +57,7 @@ public class BrokerBualuang extends FlashStreaming {
 		login_state[login_state.length -1] += username;
 	}
 	
-	public void login() {
+	public HttpContext login(Browser browser) {
 		Form form = null;
 		for (int state = 0; state < login_state.length; state++) {
 			if (form == null)
@@ -68,7 +69,7 @@ public class BrokerBualuang extends FlashStreaming {
 			if (browser.getStatusCode() != 200) {
 				logger.severe(message("State-%d HTTP Response %s \"%s\"", 
 						state, browser.getStatusCode(), browser.getReasonPhrase()));
-				return;
+				return null;
 			}
 				
 			formFilter.setNode(parser.parse()).filter();
@@ -81,7 +82,7 @@ public class BrokerBualuang extends FlashStreaming {
 					form = formFilter.actionForm(login_state[state + 1]);
 				if (form == null) {
 					logger.severe(message("State-%d FORM not found.", state));
-					return;
+					return null;
 				}
 						
 			} else if ((state + 1) == login_state.length) {
@@ -114,6 +115,7 @@ public class BrokerBualuang extends FlashStreaming {
 				//browser.printCookie();
 			}
 		}
+		return null;
 	}
 	
 	private Form buildForm(Node node) {

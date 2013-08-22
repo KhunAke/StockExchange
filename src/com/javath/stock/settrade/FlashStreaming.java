@@ -32,11 +32,15 @@ import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
 
 public abstract class FlashStreaming extends Broker  implements Runnable{
-
-	public static final String MarketSummary = "S4MarketSummary";
-	public static final String InstrumentTicker = "S4InstrumentTicker";
-	public static final String InstrumentInfo = "S4InstrumentInfo";
-	public static final String MarketTicker = "S4MarketTicker";
+	
+	public final static int ERROR_ARGUMENTS_MISMATCH = 1;
+	
+	//public static final String MarketSummary = "S4MarketSummary";
+	//public static final String InstrumentTicker = "S4InstrumentTicker";
+	//public static final String InstrumentInfo = "S4InstrumentInfo";
+	//public static final String MarketTicker = "S4MarketTicker";
+	
+	private Boolean login_process = new Boolean(false);
 	
 	protected String accountNo = "";
 	protected String pin = "000000";
@@ -75,11 +79,28 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			//= "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProvider.jsp";
 	protected String url_dataproviderbinary;
 			//= "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
-	
-	protected Browser browser;
-	private DataProviderBinary dataBinary = new DataProviderBinary();
-	
+
 	protected abstract void url_init();
+	
+	private Browser browser_for_runnable;
+	
+	public boolean getLoginProcess() {
+		synchronized (login_process) {
+			return login_process;
+		}
+	}
+	
+	public void setLoginProcess(boolean process) {
+		synchronized (login_process) {
+			this.login_process = process;
+		}
+	}
+
+	public FlashStreaming() {
+		browser_for_runnable = new Browser();
+		setHttpContext(browser_for_runnable.getContext());
+		browser_for_runnable.setTimeOut(5000);
+	}
 	
 	public long synctime() {
 		long time = new Date().getTime();
@@ -97,6 +118,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	}
 	
 	protected DataProvider seos(Form form) {
+		// browser httpContext
 		browser.post(String.format("%s", url_seos), form);
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() != 200) {
@@ -108,9 +130,19 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			dataProvider = new DataProvider().read(browser.getInputStream());
 		} catch (ObjectException e) {
 			if (e.getMessage().equals("Unauthorized Access.")) {
-				login();
+				logger.warning(message("Unauthorised Access"));
+				if (getLoginProcess()) {
+					browser.setContext(getHttpContext());
+				} else {
+					synchronized (httpContext) {
+						setLoginProcess(true);
+						setHttpContext(login(browser));
+						setLoginProcess(false);
+					}
+				}
 				dataProvider = seos(form);
-			}
+			} else
+				throw e;
 		}
 		return dataProvider;	
 	}
@@ -289,78 +321,51 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		return dataProvider;
 	}
 	
-	
-	protected synchronized void dataProviderBinary(Form form) {
+	protected DataProviderBinary dataProviderBinary(Browser browser, Form form) {
+		if (!browser.getContext().equals(getHttpContext()))
+			browser.setContext(getHttpContext());
 		browser.post(String.format("%s", url_dataproviderbinary), 
 				form);
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() == 200) {
 			try {
+				DataProviderBinary dataBinary = new DataProviderBinary();
 				dataBinary.read(browser.getInputStream());
+				return dataBinary;
 			} catch (ObjectException e) {
 				if (e.getMessage().equals("Unauthorised Access")) {
 					logger.warning(message("Unauthorised Access"));
-					login();
-					dataProviderBinary(form);
-					return;
+					if (getLoginProcess()) {
+						browser.setContext(getHttpContext());
+					} else {
+						synchronized (httpContext) {
+							setLoginProcess(true);
+							setHttpContext(login(browser));
+							setLoginProcess(false);
+						}
+					}
+					return dataProviderBinary(browser, form);
 				} else
 					throw e;
 			}
 			//storeMarketTicker(dataBinary.getMarketTicker());
 			//storeBidOffer(dataBinary.getBidOffer());
-		} else
-			logger.severe(message("HTTP Response %s \"%s\"",browser.getStatusCode(), browser.getReasonPhrase()));
-		
+		} else {
+			logger.severe(message("HTTP Response %s \"%s\"", browser.getStatusCode(), browser.getReasonPhrase()));
+			return null;
+		}	
 	}
 	
-	protected synchronized void dataProviderBinary(String service) {
+	protected DataProviderBinary dataProviderBinary(Browser browser, String service) {
 		Form form = Form.form();
 		logger.finest(message("DataProviderBinary service=\"%s\"",service));
 		form.add("service", service);
 		form.add("mode", mode);
+		boolean updateSequenceId = false;
 		String[] services = service.split(",");
 		for (int index = 0; index < services.length; index++) {
 			Streaming4 streaming4 = Streaming4.getService(services[index]);
 			switch (streaming4) {
-			case S4MarketSummary:
-				break;
-			case S4InstrumentTicker:
-				form.add("newMarket", newMarket);
-				form.add("newInstTicker", newInstTicker);
-				form.add("sequenceId", sequenceId);
-				form.add("oldMarket", oldMarket);
-				form.add("oldInstTicker", oldInstTicker);
-				oldMarket = "";
-				oldInstTicker = "";
-				break;
-			case S4InstrumentInfo:
-				form.add("initiatedFlag", initiatedFlag);
-				form.add("newInstInfo", newInstInfo);
-				form.add("oldInstInfo", oldInstInfo);
-				oldInstInfo = "";
-				break;
-			case S4MarketTicker:
-				logger.finest(message("sequenceId2=\"%s\", optionSequenceId2=\"%s\"",sequenceId2,optionSequenceId2));
-				if (newMarket2.equals("A") || newMarket2.equals("D"))
-					form.add("optionSequenceId2", optionSequenceId2);
-				if (newMarket2.equals("A") || newMarket2.equals("E"))
-					form.add("sequenceId2", sequenceId2);
-				form.add("newMarket2", newMarket2);
-				form.add("newInstTicker2", newInstTicker2);
-				form.add("newSum2", newSum2);
-				form.add("oldMarket2", oldMarket2);
-				form.add("oldInstTicker2", oldInstTicker2);
-				form.add("oldSum2", oldSum2);
-				oldMarket2 = "";
-				oldInstTicker2 = "";
-				oldSum2 = "";
-				break;
-			default:
-				logger.warning(message("Unknow service \"%s\"",services[index]));
-				break;
-			}
-			/**
-			switch (services[index]) {
 			case MarketSummary:
 				break;
 			case InstrumentTicker:
@@ -393,16 +398,21 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				oldMarket2 = "";
 				oldInstTicker2 = "";
 				oldSum2 = "";
+				updateSequenceId = true;
 				break;
 			default:
 				logger.warning(message("Unknow service \"%s\"",services[index]));
 				break;
 			}
-			*/
 		}
-		dataProviderBinary(form);
-		sequenceId2 = String.valueOf(dataBinary.getSequenceId());
-		optionSequenceId2 = String.valueOf(dataBinary.getOptionSequenceId());
+		DataProviderBinary dataBinary = dataProviderBinary(browser, form);
+		if (updateSequenceId) {
+			if (dataBinary.getSequenceId() != -1)
+				sequenceId2 = String.valueOf(dataBinary.getSequenceId());
+			if (dataBinary.getOptionSequenceId() != -1)
+				optionSequenceId2 = String.valueOf(dataBinary.getOptionSequenceId());
+		}
+		return dataBinary;
 	}
 	
 	protected void setNewMarket(String newMarket) {
@@ -443,6 +453,13 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				this.oldInstInfo = this.newInstInfo;
 			this.newInstInfo = newInstInfo;
 		}
+	}
+	
+	public void threadStoreMarketTicker(java.lang.Object... arguments) {
+		if (arguments[0] instanceof String[]) {
+			storeMarketTicker((String[]) arguments[0]);
+		} else
+			throw newObjectException(ERROR_ARGUMENTS_MISMATCH,"Arguments mismatch");
 	}
 	
 	private void storeMarketTicker(String[] tickers) {
@@ -515,11 +532,12 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			//		bid_1,bid_vol_1,bid_2,bid_vol_2,bid_3,bid_vol_3,bid_4,bid_vol_4,bid_5,bid_vol_5,
 			//		offer_1,offer_vol_1,offer_2,offer_vol_2,offer_3,offer_vol_3,offer_4,offer_vol_4,offer_5,offer_vol_5
 			String[] token = bid_offer[index].split(",");
-			String[] time = symbol_date.get(symbol_date.get(token[0])).split(":");
+			String[] time = symbol_date.get(token[0]).split(":");
 			calendar.set(Calendar.HOUR_OF_DAY, Integer.valueOf(time[0]));
 			calendar.set(Calendar.MINUTE, Integer.valueOf(time[1]));
 			calendar.set(Calendar.SECOND, Integer.valueOf(time[2]));
 			calendar.set(Calendar.MILLISECOND, 0);
+
 			Date date = calendar.getTime();
 			// Bid Order
 			for (int order = 0; order < 5; order++) {
@@ -557,7 +575,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}	
 	}
 	
-	protected String runService = String.format("%s,%s", Streaming4.S4MarketSummary, Streaming4.S4MarketTicker);
+	protected String runService = String.format("%s,%s", Streaming4.MarketSummary, Streaming4.MarketTicker);
 	protected String runInstInfo = "";
 	protected String runInstTicker = "";
 	protected String runMarket = "";
@@ -569,8 +587,16 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		this.runService = service;
 	}
 	
+	@SuppressWarnings("unchecked")
+	public void threadInstrumentInfo(java.lang.Object... arguments) {
+		if (arguments[0] instanceof Map) {
+			getInstrumentInfo((Map<String,String>) arguments[0]);
+		} else
+			throw newObjectException(ERROR_ARGUMENTS_MISMATCH,"Arguments mismatch");
+	}
+	
 	private void getInstrumentInfo(Map<String,String> symbol_date) {
-		//  Assign Begin "symbol list"  
+		// Assign Begin "symbol list"
 		String symbolList = "";
 		Iterator<String> symbols = symbol_date.keySet().iterator();
 		while (symbols.hasNext()) {
@@ -581,10 +607,12 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		} catch (StringIndexOutOfBoundsException e) {
 			symbolList = "";
 		}
-		//  Assign End "symbol list"  
+		// Assign End "symbol list"  
 		if (!symbolList.equals("")) {
+			Browser browser = new Browser(getHttpContext());
 			setNewInstInfo(symbolList);
-			dataProviderBinary(InstrumentInfo);
+			DataProviderBinary dataBinary = 
+					dataProviderBinary(browser, Streaming4.InstrumentInfo.toString());
 			String[] bids_offers = dataBinary.getBidOffer();
 			symbol_date = checkSymbolDate(symbol_date);
 			storeBidOffer(bids_offers, symbol_date);
@@ -617,8 +645,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			calendar.set(Calendar.MINUTE, Integer.valueOf(time[1]));
 			calendar.set(Calendar.SECOND, Integer.valueOf(time[2]) -1);
 			calendar.set(Calendar.MILLISECOND, 0);
-			if (queryDate.after(calendar.getTime()))
-				symbol_date.put(symbol, String.format("%1$tH:%1$tM:%1$tS",queryDate));	
+			try {
+				if (queryDate.after(calendar.getTime()))
+					symbol_date.put(symbol, String.format("%1$tH:%1$tM:%1$tS",queryDate));	
+			} catch (NullPointerException e) {}
+			
 		}
 		session.getTransaction().commit();
 		return symbol_date;
@@ -626,24 +657,32 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	public void run() {
 		try {
+			browser_for_runnable.setContext(getHttpContext());
 			setNewInstInfo(runInstInfo);
 			setNewInstTicker(runInstTicker);
 			setNewMarket(runMarket);
 			setNewMarket2(runMarket2);
 			setNewSum2(runSum2);
-			dataProviderBinary(runService);
+			DataProviderBinary dataBinary = dataProviderBinary(browser_for_runnable, runService);
 			// new Thread
-			//getInstrumentInfo(dataBinary.getSymbolDate());
+			newThread(String.format(Locale.US, "StoreMarketTicker(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+					this, "threadStoreMarketTicker", (java.lang.Object) dataBinary.getMarketTicker());
+			newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+					this, "threadInstrumentInfo", dataBinary.getSymbolDate());
+			nextTask(5);
+			
 		} catch (Exception e) {
 			logger.severe(message(e));
-		} finally {
-			nextTask();
-		}
+			nextTask(0);
+		} catch (ThreadDeath e) {
+			logger.severe(message(e));
+			nextTask(0);
+		} finally {}
 	}
 	
-	protected void nextTask() {
+	protected void nextTask(int second) {
 		Calendar calendar = Calendar.getInstance();
-		calendar.add(Calendar.SECOND, 5);
+		calendar.add(Calendar.SECOND, second);
 		long time = calendar.getTimeInMillis();
 		
 		Trigger trigger = Trigger.getInstance();

@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Properties;
 
 import org.apache.http.client.fluent.Form;
+import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
 import com.javath.Configuration;
 import com.javath.ObjectException;
 import com.javath.stock.settrade.FlashStreaming;
-import com.javath.stock.settrade.Market;
 import com.javath.util.Browser;
 import com.javath.util.html.FormFilter;
 import com.javath.util.html.HtmlParser;
@@ -83,7 +83,7 @@ public class BrokerClick2Win extends FlashStreaming {
 		this.url_init();
 		this.username = username;
 		this.password = password;
-		this.browser = new Browser();
+		this.browser = new Browser(getHttpContext());
 	}
 	
 	private static String[] login_request = {
@@ -94,7 +94,7 @@ public class BrokerClick2Win extends FlashStreaming {
 			"https://click2win.settrade.com/SETClick2WIN/Welcome.jsp"
 		};
 	
-	public void login() {
+	public HttpContext login(Browser browser) {
 		Form form = null;
 		HtmlParser parser = new HtmlParser(null);
 		FormFilter formFilter = new FormFilter(null);
@@ -112,7 +112,7 @@ public class BrokerClick2Win extends FlashStreaming {
 				}
 				logger.severe(message("State-%d/%d HTTP Response %s \"%s\"", 
 						state, login_request.length - 1, browser.getStatusCode(), browser.getReasonPhrase()));
-				return;
+				return browser.getContext();
 			}
 			formFilter.setNode(parser.parse()).filter();
 			if ((state + 1) < login_request.length) {
@@ -123,18 +123,19 @@ public class BrokerClick2Win extends FlashStreaming {
 					form = formFilter.actionForm(login_request[state + 1]);
 				if (form == null) {
 					logger.severe(message("State-%d/%d FORM not found.", state, login_request.length - 1));
-					return;
+					return browser.getContext();
 				}		
 			} else if ((state + 1) == login_request.length) {
 				logger.info(message("State-%d/%d Authentication Success.", state, login_request.length - 1));
 			}
 		}
+		return browser.getContext();	
 	}
 	
 	private Form buildForm(Node node) {
 		//HtmlParser.print(node);
 		if (node == null)
-			return null;
+			return Form.form();
 		Form form = Form.form();
 		InputFilter inputFilter = new InputFilter(node);
 		List<Node> inputs = inputFilter.filter();
