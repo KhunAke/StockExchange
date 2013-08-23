@@ -26,7 +26,7 @@ public abstract class Broker extends Object {
 	protected Browser browser;
 	protected HttpContext httpContext;
 	
-	public abstract HttpContext login(Browser browser);
+	protected abstract HttpContext login(Browser browser);
 	public abstract void portfolio();
 	public abstract void buy(String symbol, double price, long volume);
 	public abstract void sell(String symbol, double price, long volume); 

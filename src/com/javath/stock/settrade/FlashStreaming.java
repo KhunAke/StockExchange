@@ -84,15 +84,19 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	private Browser browser_for_runnable;
 	
-	public boolean getLoginProcess() {
+	public boolean lockLoginProcess(boolean lock) {
 		synchronized (login_process) {
-			return login_process;
-		}
-	}
-	
-	public void setLoginProcess(boolean process) {
-		synchronized (login_process) {
-			this.login_process = process;
+			if (lock) {
+				if (login_process.booleanValue())
+					return false;
+				else {
+					login_process = true;
+					return true;
+				}
+			} else {
+				login_process = false;
+				return true;
+			}
 		}
 	}
 
@@ -131,15 +135,13 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		} catch (ObjectException e) {
 			if (e.getMessage().equals("Unauthorized Access.")) {
 				logger.warning(message("Unauthorised Access"));
-				if (getLoginProcess()) {
-					browser.setContext(getHttpContext());
-				} else {
+				if (lockLoginProcess(true))
 					synchronized (httpContext) {
-						setLoginProcess(true);
 						setHttpContext(login(browser));
-						setLoginProcess(false);
+						lockLoginProcess(false);
 					}
-				}
+				else
+					browser.setContext(getHttpContext());
 				dataProvider = seos(form);
 			} else
 				throw e;
@@ -335,15 +337,13 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			} catch (ObjectException e) {
 				if (e.getMessage().equals("Unauthorised Access")) {
 					logger.warning(message("Unauthorised Access"));
-					if (getLoginProcess()) {
-						browser.setContext(getHttpContext());
-					} else {
+					if (lockLoginProcess(true))
 						synchronized (httpContext) {
-							setLoginProcess(true);
 							setHttpContext(login(browser));
-							setLoginProcess(false);
+							lockLoginProcess(false);
 						}
-					}
+					else
+						browser.setContext(getHttpContext());
 					return dataProviderBinary(browser, form);
 				} else
 					throw e;

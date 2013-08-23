@@ -94,7 +94,7 @@ public class BrokerClick2Win extends FlashStreaming {
 			"https://click2win.settrade.com/SETClick2WIN/Welcome.jsp"
 		};
 	
-	public HttpContext login(Browser browser) {
+	protected HttpContext login(Browser browser) {
 		Form form = null;
 		HtmlParser parser = new HtmlParser(null);
 		FormFilter formFilter = new FormFilter(null);
