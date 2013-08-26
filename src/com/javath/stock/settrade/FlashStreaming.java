@@ -28,6 +28,7 @@ import com.javath.mapping.StreamingTickerHome;
 import com.javath.mapping.StreamingTickerId;
 import com.javath.stock.Broker;
 import com.javath.util.Browser;
+import com.javath.util.Lock;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
 
@@ -40,7 +41,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	//public static final String InstrumentInfo = "S4InstrumentInfo";
 	//public static final String MarketTicker = "S4MarketTicker";
 	
-	private Boolean login_process = new Boolean(false);
+	private final Lock login_process = new Lock();
 	
 	protected String accountNo = "";
 	protected String pin = "000000";
@@ -87,15 +88,18 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	public boolean lockLoginProcess(boolean lock) {
 		synchronized (login_process) {
 			if (lock) {
-				if (login_process.booleanValue())
+				if (login_process.isValue())
 					return false;
-				else {
-					login_process = true;
+				else { // lock : false -> true
+					login_process.setValue(lock);
 					return true;
 				}
 			} else {
-				login_process = false;
-				return true;
+				if (login_process.isValue()) { // lock : true -> false
+					login_process.setValue(lock);
+					return true;
+				} else
+					return false;
 			}
 		}
 	}
