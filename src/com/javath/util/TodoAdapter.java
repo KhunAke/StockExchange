@@ -7,9 +7,11 @@ public class TodoAdapter extends Thread implements Todo {
 	protected long schedule = 0;
 	protected long lifeTimes = 0;
 	protected long deathTime = 0;
+	private Object object = null;
 	
 	public TodoAdapter(long schedule, Runnable runnable, String name, long lifeTimes) {
 		super(runnable, name);
+		object = runnable;
 		setSchedule(schedule);
 		setLifeTimes(lifeTimes);
 	}
@@ -69,6 +71,11 @@ public class TodoAdapter extends Thread implements Todo {
 	@Override
 	public void setDeathTime(long time) {
 		this.deathTime = time;
+	}
+
+	@Override
+	public String getRunnableNameClass() {
+		return object.getClass().getCanonicalName();
 	}
 	
 }

@@ -1,5 +1,10 @@
 package com.javath;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Properties;
 
 public class OS {
@@ -34,5 +39,56 @@ public class OS {
 	
 	public static OS getInstance() {
 		return os;
+	}
+	
+	public static String datetime() {
+		return datetime(new Date());
+	}
+	
+	public static String datetime(Date date) {
+		return String.format(Locale.US, "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS", date);
+	}
+	
+	public static Date datetime(String date) {
+		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US); 
+		try {
+			return formatter.parse(date);
+		} catch (ParseException e) {
+			throw new ObjectException(e);
+		}
+	}
+	
+	public static String date() {
+		return date(new Date());
+	}
+	
+	public static String date(Date date) {
+		return String.format(Locale.US, "%1$tY-%1$tm-%1$td", date);
+	}
+	
+	public static Date date(String date) {
+		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.US); 
+		try {
+			return formatter.parse(date);
+		} catch (ParseException e) {
+			throw new ObjectException(e);
+		}
+	}
+	
+	public static String time() {
+		return time(new Date());
+	}
+	
+	public static String time(Date date) {
+		return String.format(Locale.US, "%1$tH:%1$tM:%1$tS", date);
+	}
+	
+	public static Date time(String date) {
+		DateFormat formatter = new SimpleDateFormat("HH:mm:ss", Locale.US); 
+		try {
+			return formatter.parse(date);
+		} catch (ParseException e) {
+			throw new ObjectException(e);
+		}
 	}
 }

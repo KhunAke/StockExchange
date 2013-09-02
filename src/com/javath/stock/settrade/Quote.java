@@ -144,7 +144,7 @@ public class Quote extends Object implements Runnable, CustomHandler {
 			id.setDate(calendar.getTime());
 		}
 		try {
-			board.setLast(Market.castFloat(textNode.getString(7,8)));
+			board.setLast(Market. (textNode.getString(7,8)));
 		} catch (java.lang.NumberFormatException e) {}
 		try {
 			board.setOpen(Market.castFloat(textNode.getString(25,4)));

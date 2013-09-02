@@ -1,7 +1,9 @@
 package com.javath.stock.settrade;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -16,10 +18,8 @@ import org.w3c.dom.Node;
 
 import com.javath.Object;
 import com.javath.ObjectException;
-import com.javath.mapping.SettradeIndex;
-import com.javath.mapping.SettradeIndexHome;
-import com.javath.mapping.SettradeIndexId;
 import com.javath.util.Browser;
+import com.javath.util.Storage;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
 import com.javath.util.html.CustomFilter;
@@ -36,6 +36,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 	private Browser browser;
 	private Date date;
 	private MarketStatus status;
+	private String task;
 	
 	private Market() {
 		browser = new Browser();
@@ -53,13 +54,14 @@ public class Market extends Object implements Runnable, CustomHandler {
 		} else
 			this.date = date;
 		this.status = MarketStatus.Unknow;
+		this.task = String.format("Trigger \"%s\" cache in", this.getClass().getSimpleName());
 	}
 	
 	public static Market getInstance() {
 		return instance;
 	}
 	
-	public Date getDate() {
+	public Date getDateTime() {
 		return this.date;
 	}
 	
@@ -81,23 +83,25 @@ public class Market extends Object implements Runnable, CustomHandler {
 	@Override
 	public void run() {
 		try {
-			getWebPage();
-			file.delete(browser.getFileContent());
+			getWebPage();	
 		} catch (Exception e){
 			logger.severe(message(e));
 		} catch (ThreadDeath e) {
 			logger.severe(message(e));
 		} finally {
-			nextTask(this.date);
+			nextTask(getDateTime());
 		}
 	}
 	
-	private synchronized void getWebPage() {
+	private void getWebPage() {
 		InputStream inputStream = null;
 		try {
 			inputStream = browser.get("http://www.settrade.com/C13_MarketSummary.jsp?detail=SET");
 			HtmlParser parser = new HtmlParser(inputStream);
-			logger.info(message("Cache in \"%s\"", browser.getFileContent()));
+			logger.fine(message("Cache in \"%s\"", browser.getFileContent()));
+			//task = task != null ? task : "Trigger \"Market\" cache in";
+			String comment = String.format("%s \"%s\"", 
+					task, browser.getFileContent());
 			CustomFilter filter = new CustomFilter(parser.parse());
 			
 			//filter.setNode(parser.parse());
@@ -137,22 +141,12 @@ public class Market extends Object implements Runnable, CustomHandler {
 				this.date = date;
 				/** Thread of Board **/
 				//newThread(String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date), 
-				//		new Board(date), "run");
-				new Thread(new Board(date), 
-						String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date))
-					.start();
+				//		new Board(date, status), "run");
+				Board.createBoard(task, getDateTime(), getStatus());
 			}
 			
-			for (int index = 1; index < textNode.length(); index++) {
-				String[] stringArray = textNode.getStringArray(index);
-				if (stringArray[0].equals("2") && (stringArray[2].length() > 0)) {
-					//textNode.printStringArray(stringArray);
-					/** Thread of store  **/
-					newThread(String.format(Locale.US, "%1s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
-							stringArray[2].substring(0, stringArray[2].indexOf(" Index")), this.date), 
-							this, "threadStore", (java.lang.Object) stringArray);
-				}
-			}
+			createStoreMarket(comment, textNode);
+			
 		} finally {
 			try {
 				if (inputStream != null)
@@ -164,49 +158,57 @@ public class Market extends Object implements Runnable, CustomHandler {
 		}
 	}
 	
-	public void threadStore(java.lang.Object... arguments) {
-		if (arguments[0] instanceof String[]) {
-			store((String[]) arguments[0]);
+	private void createStoreMarket(String comment, TextNode textNode) {
+		newThread(String.format(Locale.US, "StoreMarket(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", getDateTime()), 
+				this, "threadStoreMarket", comment, getDateTime(), getStatus(), textNode);
+	}
+	
+	public void threadStoreMarket(java.lang.Object... arguments) {
+		if ((arguments[0] instanceof String) && 
+			(arguments[1] instanceof Date) &&
+			(arguments[2] instanceof MarketStatus) &&
+			(arguments[3] instanceof TextNode)) {
+			storeMarket((String) arguments[0],
+						(Date) arguments[1],
+						(MarketStatus) arguments[2],
+						(TextNode) arguments[3]);
 		} else
 			throw newObjectException(ERROR_ARGUMENTS_MISMATCH,"Arguments mismatch");
 	}
 	
-	private void store(String[] data) {
-		SettradeIndexHome home = new SettradeIndexHome();
-		SettradeIndexId id = new SettradeIndexId();
-		SettradeIndex index = new SettradeIndex(id);
-		
-		id.setSymbol(data[2].substring(0, data[2].indexOf(" Index")));
-		id.setDate(this.getDate());
-		//id.setTime(this.getTime());
+	private void storeMarket(String comment, Date date, MarketStatus status, TextNode textNode) {
+		String filename = String.format(Locale.US, "%1$s%2$smarket.%3$tY%3$tm%3$td.%4$s.txt", 
+				path.var, file.separator, date, status);
+		String datetime = String.format(Locale.US, "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS", date);
+		Storage storage  = Storage.getInstance(filename);
 		try {
-			index.setLast(castFloat(data[4]));
-		} catch (java.lang.NumberFormatException e) {}
-		try {
-			index.setHigh(castFloat(data[10]));
-		} catch (java.lang.NumberFormatException e) {}
-		try {
-			index.setLow(castFloat(data[12]));
-		} catch (java.lang.NumberFormatException e) {}
-		try {
-			index.setVolume(castLong(data[14]));
-		} catch (java.lang.NumberFormatException e) {}
-		try {
-			index.setValue(castDouble(data[16]));
-		} catch (java.lang.NumberFormatException e) {}
-		
-		Session session = ((SessionFactory) this.getContext("SessionFactory"))
-		//	.openSession();
-			  .getCurrentSession();
-		session.beginTransaction();
-		home.persist(index);
-		try {
-			session.getTransaction().commit();
-		} catch (org.hibernate.JDBCException e) {
-			logger.severe(message("{%1$s, %2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS} SQL Error %3$d, SQLState %4$s: %5$s", 
-					id.getSymbol(), id.getDate(), e.getErrorCode(), e.getSQLState(), e.getMessage()));
-			session.getTransaction().rollback();
-		} 
+			OutputStreamWriter output = new OutputStreamWriter(storage.append());
+			output.write(String.format("#-- %s%n", comment));
+			
+			for (int index = 1; index < textNode.length(); index++) {
+				String[] data = textNode.getStringArray(index);
+				if (data[0].equals("2") && (data[2].length() > 0)) {
+					String symbol =data[2].substring(0, data[2].indexOf(" Index"));
+					//String datetime;
+					String last = replace(data[4]);
+					String high = replace(data[10]);
+					String low = replace(data[12]);
+					String volume = replace(data[14]);
+					String value = replace(data[16]);
+					output.write(String.format("%s,%s,%s,%s,%s,%s,%s%n", 
+							symbol,datetime,last,high,low,volume,value));
+				}
+			}
+			output.flush();
+			output.close();
+		} catch (FileNotFoundException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		}
+		storage.release();
 	}
 	
 	private void nextTask(Date date) {
@@ -227,7 +229,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 		
 		calendar.setTime(date);
 		switch (this.getStatus()) {
-		case Unknow:
+		case Empty:
 			time = MarketStatus.PreOpen_I.getBegin(new Date());
 			break;
 		case PreOpen_I:
@@ -275,8 +277,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 			time = calendar.getTimeInMillis();
 			break;
 		default:
-			logger.warning(message("Unknow Status at %1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS is \"%2$s\"", 
-					date, this.getStatus()));
+			logger.warning(message("Unknow Status at %1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS", date));
 			if ((current - time) < 15000) // 15 (s) * 1000 (ms)
 				calendar.add(Calendar.SECOND, 16);
 			time = calendar.getTimeInMillis();
@@ -295,9 +296,11 @@ public class Market extends Object implements Runnable, CustomHandler {
 			}
 		}
 		
-		
 		Trigger trigger = Trigger.getInstance();
-		logger.info(message("Last Update \"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS\" -> Next Task \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", this.date,  time));	
+		String market_datetime = String.format(Locale.US, "%1$s \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", 
+				this.getClass().getSimpleName(), time);
+		logger.info(message("Last Update \"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS\" -> Next %2$s", this.date,  market_datetime));
+		task = String.format("%1$s cache in", market_datetime);
 		//trigger.start();
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
@@ -308,17 +311,9 @@ public class Market extends Object implements Runnable, CustomHandler {
 		SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
 		return dateFormat.parse(data);
 	}
-	
-	public static Float castFloat(String data) {
-		return Float.valueOf(data.replace(",", ""));
-	}
-	
-	public static Double castDouble(String data) {
-		return Double.valueOf(data.replace(",", ""));
-	}
-	
-	public static Long castLong(String data) {
-		return Long.valueOf(data.replace(",", ""));
-	}
 
+	public static String replace(String data) {
+		String result = data.replace("-", "");
+		return result.replace(",", "");
+	}
 }

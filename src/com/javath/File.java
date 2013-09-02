@@ -5,9 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Properties;
+
+import org.apache.commons.codec.binary.Hex;
 
 public class File {
 	
@@ -67,9 +73,10 @@ public class File {
 			int dot = name.lastIndexOf('.');
 			if (dot == -1)
 				dot = name.length();
-			Calendar calendar = Calendar.getInstance();
+			//Calendar calendar = Calendar.getInstance();
 			name = name.substring(0, dot) + "." +
-					String.format(Locale.US ,"%1$tY-%1$tm-%1$td.%2$07x", calendar.getTime(), calendar.getTimeInMillis() % TIME) +
+					//String.format(Locale.US ,"%1$tY-%1$tm-%1$td.%2$07x", calendar.getTime(), calendar.getTimeInMillis() % TIME) +
+					datetime() +
 					name.substring(dot);
 		}
 		return fileOutput.getParent() + file.separator + name;
@@ -82,6 +89,37 @@ public class File {
 	public boolean delete(String filename) {
 		java.io.File file = new java.io.File(filename);
 		return file.delete();
+	}
+	
+	public static String datetime() {
+		Calendar calendar = Calendar.getInstance();
+		return String.format(Locale.US ,"%1$tY-%1$tm-%1$td.%2$07x", calendar.getTime(), calendar.getTimeInMillis() % TIME);
+	}
+	
+	public static String date(Date date) {
+		return String.format(Locale.US, "%1$tY-%1$tm-%1$td", date);
+	}
+	
+	public static Date date(String date) {
+		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.US); 
+		try {
+			return formatter.parse(date);
+		} catch (ParseException e) {
+			throw new ObjectException(e);
+		}
+	}
+	
+	public static String time(Date date) {
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date);
+		return String.format("%07x", calendar.getTimeInMillis() % TIME);
+	}
+	
+	public static Date time(String date) {
+		long time = Long.decode("#" + date);
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(time);
+		return calendar.getTime();
 	}
 	
 }

@@ -1,5 +1,8 @@
 package com.javath.stock.settrade;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -7,6 +10,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -27,10 +31,13 @@ import com.javath.mapping.StreamingTicker;
 import com.javath.mapping.StreamingTickerHome;
 import com.javath.mapping.StreamingTickerId;
 import com.javath.stock.Broker;
+import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
 import com.javath.util.Lock;
+import com.javath.util.Storage;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
+import com.javath.util.html.TextNode;
 
 public abstract class FlashStreaming extends Broker  implements Runnable{
 	
@@ -332,7 +339,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			browser.setContext(getHttpContext());
 		browser.post(String.format("%s", url_dataproviderbinary), 
 				form);
-		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
+		logger.fine(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() == 200) {
 			try {
 				DataProviderBinary dataBinary = new DataProviderBinary();
@@ -459,11 +466,62 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}
 	}
 	
+	private void createStoreMarketTicker(String[] tickers) {
+		String comment = String.format("%s \"%s\"", task, browser_for_runnable.getFileContent());
+		newThread(String.format(Locale.US, "StoreMarketTicker(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+				this, "threadStoreMarketTicker", comment, tickers);
+	}
+	
 	public void threadStoreMarketTicker(java.lang.Object... arguments) {
-		if (arguments[0] instanceof String[]) {
-			storeMarketTicker((String[]) arguments[0]);
+		if ((arguments[0] instanceof String) &&
+			(arguments[1] instanceof String[])) {
+			storeMarketTicker((String) arguments[0],  (String[]) arguments[1]);
 		} else
 			throw newObjectException(ERROR_ARGUMENTS_MISMATCH,"Arguments mismatch");
+	}
+	
+	private void storeMarketTicker(String comment, String[] tickers) {
+		if (tickers == null)
+			return;
+		Date current = new Date();
+		String filename = String.format(Locale.US, "%1$s%2$sticker.%3$tY%3$tm%3$td.txt", 
+				path.var, file.separator, current);
+		Storage storage  = Storage.getInstance(filename);
+		try {
+			OutputStreamWriter output = new OutputStreamWriter(storage.append());
+			output.write(String.format("#-- %s%n", comment));
+			
+			String date = String.format(Locale.US, "%1$tY-%1$tm-%1$td", current);
+			for (int index = 0; index < tickers.length; index++) {
+				String[] tokens = tickers[index].split(",");
+				//String date;
+				String type = tokens[0];
+				String market = tokens[1];
+				String N = tokens[2];
+				String time = String.format("%s %s", date, tokens[3]);
+				String side = tokens[4];
+				String price = tokens[5];
+				String close = tokens[6];
+				String change = tokens[7];
+				String change_percent = tokens[8];
+				String sequence = tokens[9];
+				String a = tokens[10];
+				String b = tokens[11];
+				String volume = tokens[12];
+				String symbol = tokens[13];
+				output.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n", 
+						date,type,market,N,time,side,price,close,change,change_percent,sequence,a,b,volume,symbol));
+			}
+			output.flush();
+			output.close();
+		} catch (FileNotFoundException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		}
+		
 	}
 	
 	private void storeMarketTicker(String[] tickers) {
@@ -519,6 +577,73 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 					e.getErrorCode(), e.getSQLState(), e.getMessage()));
 			session.getTransaction().rollback();
 		}		
+	}
+	
+	private class BidOffer {
+		public String bid_volume = "";
+		public String offer_volume = "";
+	}
+	
+	private void storeBidOffer(String comment, String[] bid_offer, Map<String,String> symbol_date) {
+		Date current = new Date();
+		String filename = String.format(Locale.US, "%1$s%2$sbid.offer.%3$tY%3$tm%3$td.txt", 
+				path.var, file.separator, current);
+		Storage storage  = Storage.getInstance(filename);
+
+		try {
+			
+			OutputStreamWriter output = new OutputStreamWriter(storage.append());
+			output.write(String.format("#-- %s%n", comment));
+			
+			for (int index = 0; index < bid_offer.length; index++) {
+				// bid_offer = symbol,
+				//		bid_1,bid_vol_1,bid_2,bid_vol_2,bid_3,bid_vol_3,bid_4,bid_vol_4,bid_5,bid_vol_5,
+				//		offer_1,offer_vol_1,offer_2,offer_vol_2,offer_3,offer_vol_3,offer_4,offer_vol_4,offer_5,offer_vol_5
+				Map<String,BidOffer> prices = new HashMap<String,BidOffer>();
+				String[] token = bid_offer[index].split(",");
+				String symbol = token[0];
+				String datetime = String.format(Locale.US, "%1$tY-%1$tm-%1$td %2$s", current, symbol_date.get(symbol));
+				// Bid Order
+				for (int order = 0; order < 5; order++) {
+					String price = token[1 + (order * 2)];
+					String bid_volume = token[2 + (order * 2)];
+					if (Float.valueOf(price) != 0.00) {
+						BidOffer bid = new BidOffer();
+						bid.bid_volume = bid_volume;
+						prices.put(price, bid);
+					}
+				}
+				// Offer Order
+				for (int order = 0; order < 5; order++) {
+					String price = token[11 + (order * 2)];
+					String offer_volume = token[12 + (order * 2)];
+					if (Float.valueOf(price) != 0.00) {
+						BidOffer offer = prices.get(price);
+						if (offer == null)
+							offer = new BidOffer();
+						offer.offer_volume = offer_volume;
+						prices.put(price, offer);
+					}
+				}
+				
+				prices.keySet().iterator();
+				for (Iterator<String> keys = prices.keySet().iterator(); keys.hasNext();) {
+					String price = keys.next();
+					BidOffer volume = prices.get(price);
+					output.write(String.format("%s,%s,%s,%s,%s%n", 
+							symbol,datetime,price,volume.bid_volume,volume.offer_volume));
+				}
+			}
+			
+			output.flush();
+			output.close();
+		} catch (FileNotFoundException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IOException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		}
 	}
 	
 	private void storeBidOffer(String[] bid_offer, Map<String,String> symbol_date) {
@@ -587,19 +712,27 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	protected String runInstTicker2 = "_all";
 	protected String runSum2 = "Y";
 	
+	private String task = String.format("Trigger \"%s\" cache in", this.getClass().getSimpleName());;
+	
 	public void setupRun(String service) {
 		this.runService = service;
 	}
 	
+	private void createInstrumentInfo(Map<String, String> symbol_date) {
+		newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+				this, "threadInstrumentInfo", task, symbol_date);
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void threadInstrumentInfo(java.lang.Object... arguments) {
-		if (arguments[0] instanceof Map) {
-			getInstrumentInfo((Map<String,String>) arguments[0]);
+		if ((arguments[0] instanceof String) &&
+			(arguments[1] instanceof Map)) {
+			getInstrumentInfo((String) arguments[0], (Map<String,String>) arguments[1]);
 		} else
 			throw newObjectException(ERROR_ARGUMENTS_MISMATCH,"Arguments mismatch");
 	}
 	
-	private void getInstrumentInfo(Map<String,String> symbol_date) {
+	private void getInstrumentInfo(String task, Map<String,String> symbol_date) {
 		// Assign Begin "symbol list"
 		String symbolList = "";
 		Iterator<String> symbols = symbol_date.keySet().iterator();
@@ -618,8 +751,9 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			DataProviderBinary dataBinary = 
 					dataProviderBinary(browser, Streaming4.InstrumentInfo.toString());
 			String[] bids_offers = dataBinary.getBidOffer();
-			symbol_date = checkSymbolDate(symbol_date);
-			storeBidOffer(bids_offers, symbol_date);
+			//symbol_date = checkSymbolDate(symbol_date);
+			String comment = String.format("%s \"%s\"", task, browser.getFileContent());
+			storeBidOffer(comment, bids_offers, symbol_date);
 		}
 	}
 	
@@ -669,12 +803,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			setNewSum2(runSum2);
 			DataProviderBinary dataBinary = dataProviderBinary(browser_for_runnable, runService);
 			// new Thread
-			newThread(String.format(Locale.US, "StoreMarketTicker(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
-					this, "threadStoreMarketTicker", (java.lang.Object) dataBinary.getMarketTicker());
-			newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
-					this, "threadInstrumentInfo", dataBinary.getSymbolDate());
+			createStoreMarketTicker(dataBinary.getMarketTicker());
+			createInstrumentInfo(dataBinary.getSymbolDate());
+			//newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+			//		this, "threadInstrumentInfo", dataBinary.getSymbolDate());
 			nextTask(5);
-			
 		} catch (Exception e) {
 			logger.severe(message(e));
 			nextTask(0);
@@ -691,6 +824,9 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		
 		Trigger trigger = Trigger.getInstance();
 		//trigger.start();
+		String next = String.format(Locale.US, "%1$s \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", this.getClass().getSimpleName(), time);
+		logger.info(message("Next %1$s", next));
+		task = String.format("%1$s cache in", next);
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
 				this.getClass().getSimpleName(), time, 5)));

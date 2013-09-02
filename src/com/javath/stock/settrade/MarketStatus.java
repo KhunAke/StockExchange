@@ -16,7 +16,7 @@ public enum MarketStatus {
 	 *    T3 - 17:00 OffHour
 	 * 17:00 - 23:59 Closed
 	 */
-	Unknow ("00:00:00:0", "09:30:00:0"),
+	Empty ("00:00:00:0", "09:30:00:0"),
 	PreOpen_I ("09:30:00:0", "T1"),
 	Open_I ("T1", "12:30:00:0"),
 	Intermission ("12:30:00:0", "14:00:00:0"),
@@ -24,7 +24,8 @@ public enum MarketStatus {
 	Open_II ("T2", "16:30:00:0"),
 	PreClose ("16:30:00:0", "T3"),
 	OffHour ("T3", "17:00:00:0"),
-	Closed ("17:00:00:00", "23:59:59:999");
+	Closed ("17:00:00:00", "23:59:59:999"),
+	Unknow ("00:00:00:0", "23:59:59:999");
 	
 	private String begin;
 	private String end;
@@ -79,7 +80,9 @@ public enum MarketStatus {
 			return OffHour;
 		else if (status.equals("Closed"))
 			return Closed;
-		else
+		else if (status.equals("")) 
+			return Empty;
+		else 
 			return Unknow;
 	}
 	

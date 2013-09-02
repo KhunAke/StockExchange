@@ -6,9 +6,15 @@ import java.io.IOException;
 import java.lang.Thread.State;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Queue;
@@ -25,6 +31,7 @@ public class Trigger extends Object {
 	private static Trigger trigger;
 	private static Preferences preferences;
 	
+	private final static Map<String,Long> watchdog = new HashMap<String, Long>();
 	private static Queue<Todo> doingList = new LinkedList<Todo>();
 	private static Queue<Todo> todoList = new LinkedList<Todo>();
 	private static int pulserate = 60000;
@@ -48,9 +55,11 @@ public class Trigger extends Object {
 	        downtime = Integer.parseInt(properties.getProperty("downtime", "300000"));
 	        int size = Integer.parseInt(properties.getProperty("Todo.size", "0"));
 	        for (int index = 0; index < size; index++) {
-	        	@SuppressWarnings("unchecked")
-				Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(
-	        			properties.getProperty("Todo." + index));
+	        	String classname = properties.getProperty("Todo." + index);
+	        	watchdog.put(classname, new Long(0));
+	        	/**
+				@SuppressWarnings("unchecked")
+				Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(classname);
 	        	Runnable runnable = null;
 				try {
 					runnable = classRunnable.newInstance();
@@ -61,7 +70,9 @@ public class Trigger extends Object {
 				}
 				todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
 	        	//todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index), downtime/pulserate));
+	        	*/
 			}
+	        wakeUp(1);
 	        
 		} catch (FileNotFoundException e) { 
 			//logger.severe(message(e));
@@ -69,10 +80,10 @@ public class Trigger extends Object {
 		} catch (IOException e) {
 			//logger.severe(message(e));
 			throw new ObjectException(e);
-		} catch (ClassNotFoundException e) {
+		} //catch (ClassNotFoundException e) {
 			//logger.severe(message(e));
-			throw new ObjectException(e);
-		}
+		//	throw new ObjectException(e);
+		//}
     }
 	
 	private static Runnable invoke_getInstance(Class<Runnable> classRunnable) {
@@ -199,8 +210,8 @@ public class Trigger extends Object {
 		synchronized(doingList) {
 			Queue<Todo> queue = new LinkedList<Todo>();
 			while (doingList.size() != 0) {
-				
 				Todo todo = doingList.poll();
+				updateWatchdog(todo.getRunnableNameClass(), datetime);
 				if (todo.getState() != State.TERMINATED) {
 					queue.add(todo);
 					if ((todo.getDeathTime() != 0) && (todo.getDeathTime() <= datetime)) {
@@ -221,6 +232,7 @@ public class Trigger extends Object {
 				Queue<Todo> queue = new LinkedList<Todo>();
 				while (todoList.size() != 0) {
 					Todo todo = todoList.poll();
+					updateWatchdog(todo.getRunnableNameClass(), datetime);
 					if (todo.getSchedule() <= datetime) {
 						if (todo.getLifeTimes() != 0)
 							todo.setDeathTime(datetime + (todo.getLifeTimes() * pulserate)); 
@@ -241,6 +253,7 @@ public class Trigger extends Object {
 		//} else {
 		//	stepdown = Calendar.getInstance().getTimeInMillis();
 		//}
+		wakeUp(datetime);	
 	}
 	
 	public boolean addTodo(Todo todo) {
@@ -254,6 +267,55 @@ public class Trigger extends Object {
 	public static void main(String[] args) {
 		Trigger trigger = Trigger.getInstance();
 		trigger.start();
+	}
+	
+	public static String datetime(Date date) {
+		return String.format(Locale.US, "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS", date);
+	}
+	
+	public static Date datetime(String date) {
+		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US); 
+		try {
+			return formatter.parse(date);
+		} catch (ParseException e) {
+			throw new ObjectException(e);
+		}
+	}
+	
+	private void updateWatchdog(String classname, long datetime) {
+		Long state = watchdog.get(classname);
+		if (state != null) { 
+			state = datetime;
+			watchdog.put(classname, state);
+		}
+	}
+	
+	private static void wakeUp(long datetime) {
+		for (Iterator<String> iterator = watchdog.keySet().iterator(); iterator.hasNext();) {
+			String classname = iterator.next();
+			Long status = watchdog.get(classname);
+			if (status != null) {
+				if (status.longValue() != datetime) {
+					System.out.printf("%s Trigger wakes up \"%s\"%n", datetime(new Date()), classname);
+					try {
+						@SuppressWarnings("unchecked")
+						Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(classname);
+						Runnable runnable = null;
+						try {
+							runnable = classRunnable.newInstance();
+						} catch (InstantiationException e) {
+							runnable = invoke_getInstance(classRunnable);
+						} catch (IllegalAccessException e) {
+							runnable = invoke_getInstance(classRunnable);
+						}
+						todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
+					} catch (ClassNotFoundException e) {
+						//logger.severe(message(e));
+						throw new ObjectException(e);
+					}
+				}
+			}
+		}
 	}
 	
 }

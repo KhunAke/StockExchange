@@ -163,12 +163,7 @@ public class Storage extends Object {
 	}
 	
 	public void remove() {
-		try {
-			map.remove(filename.getCanonicalPath());
-		} catch (IOException e) {
-			logger.warning(message(e));
-			//throw new ObjectException(e);
-		}
+		map.remove(filename.getAbsolutePath());
 	}
 	
 	@Override
