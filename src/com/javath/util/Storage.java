@@ -39,11 +39,13 @@ public class Storage extends Object {
 		return getInstance(fileDefault);
 	}
 	
-	public static Storage getInstance(String filename) {
+	public synchronized static Storage getInstance(String filename) {
 		File file = new File(filename);
 		Storage storage = map.get(file.getAbsolutePath());
-		if (storage == null)
+		if (storage == null) {
 			storage = new Storage(filename);
+			map.put(storage.getFilename(), storage);
+		}
 		return storage;
 	}
 	
@@ -54,6 +56,7 @@ public class Storage extends Object {
 	private boolean reserve(boolean lock) {
 		boolean wait = false;
 		while (true) {
+			wait = false;
 			synchronized (this.lock) {
 				if (lock) {
 					if (this.lock.isValue())

@@ -93,15 +93,15 @@ public class File {
 	
 	public static String datetime() {
 		Calendar calendar = Calendar.getInstance();
-		return String.format(Locale.US ,"%1$tY-%1$tm-%1$td.%2$07x", calendar.getTime(), calendar.getTimeInMillis() % TIME);
+		return String.format(Locale.US ,"%1$tY%1$tm%1$td.%2$07x", calendar.getTime(), calendar.getTimeInMillis() % TIME);
 	}
 	
 	public static String date(Date date) {
-		return String.format(Locale.US, "%1$tY-%1$tm-%1$td", date);
+		return String.format(Locale.US, "%1$tY%1$tm%1$td", date);
 	}
 	
 	public static Date date(String date) {
-		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.US); 
+		DateFormat formatter = new SimpleDateFormat("yyyyMMdd", Locale.US); 
 		try {
 			return formatter.parse(date);
 		} catch (ParseException e) {

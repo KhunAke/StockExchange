@@ -57,23 +57,8 @@ public class Trigger extends Object {
 	        for (int index = 0; index < size; index++) {
 	        	String classname = properties.getProperty("Todo." + index);
 	        	watchdog.put(classname, new Long(0));
-	        	/**
-				@SuppressWarnings("unchecked")
-				Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(classname);
-	        	Runnable runnable = null;
-				try {
-					runnable = classRunnable.newInstance();
-				} catch (InstantiationException e) {
-					runnable = invoke_getInstance(classRunnable);
-				} catch (IllegalAccessException e) {
-					runnable = invoke_getInstance(classRunnable);
-				}
-				todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
-	        	//todoList.add(new TodoAdapter(runnable,String.format("Todo-%d", index), downtime/pulserate));
-	        	*/
 			}
-	        wakeUp(1);
-	        
+	        //wakeUp(1); 
 		} catch (FileNotFoundException e) { 
 			//logger.severe(message(e));
 			throw new ObjectException(e);
@@ -86,25 +71,25 @@ public class Trigger extends Object {
 		//}
     }
 	
-	private static Runnable invoke_getInstance(Class<Runnable> classRunnable) {
+	private Runnable invoke_getInstance(Class<Runnable> classRunnable) {
 		try {
 			Method method = classRunnable.getDeclaredMethod("getInstance");
 			return (Runnable) method.invoke(null);
-		} catch (SecurityException ex) {
-			//logger.severe(message(ex));
-			throw new ObjectException(ex);
-		} catch (NoSuchMethodException ex) {
-			//logger.severe(message(ex));
-			throw new ObjectException(ex);
-		} catch (IllegalArgumentException ex) {
-			//logger.severe(message(ex));
-			throw new ObjectException(ex);
-		} catch (IllegalAccessException ex) {
-			//logger.severe(message(ex));
-			throw new ObjectException(ex);
-		} catch (InvocationTargetException ex) {
-			//logger.severe(message(ex));
-			throw new ObjectException(ex);
+		} catch (SecurityException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (NoSuchMethodException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IllegalArgumentException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (IllegalAccessException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
+		} catch (InvocationTargetException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
 		}
 	}
 	
@@ -155,19 +140,6 @@ public class Trigger extends Object {
 		trigger.stop();
 	}
 	
-	protected boolean isThreadDefault(Thread thread) {
-		String name = thread.getName();
-		if ( name.equals("Reference Handler") ||
-			 name.equals("Attach Listener") ||
-			 name.equals("Finalizer") ||
-			 name.equals("Timer-0") ||
-			 name.equals("DestroyJavaVM") ||
-			 name.equals("Signal Dispatcher"))
-			return true;
-		else
-			return false;
-	}
-	
 	protected void checkSchedule(long datetime) {
 		boolean running = preferences.getBoolean("running", false);
 		if (running == false) {
@@ -178,7 +150,7 @@ public class Trigger extends Object {
 							threads.hasNext();) {
 						Thread thread = threads.next();
 						//String thread_name = thread.getName();
-						if (! isThreadDefault(thread) ) {
+						if (thread.getName().charAt(0) == '#') {
 							logger.warning(message("TERMINATED thread(%d) name=\"%s\", status=\"%s\""
 									,thread.getId(), thread.getName(), thread.getState()));
 						}
@@ -191,7 +163,7 @@ public class Trigger extends Object {
 							threads.hasNext();) {
 						Thread thread = threads.next();
 						//String thread_name = thread.getName();
-						if (! isThreadDefault(thread) ) {
+						if (thread.getName().charAt(0) == '#') {
 							logger.info(message("thread(%d) name=\"%s\", status=\"%s\"",
 									thread.getId(), thread.getName(), thread.getState()));
 							process = true;
@@ -205,8 +177,7 @@ public class Trigger extends Object {
 			}
 			return;
 		}
-		//if (stepdown < datetime)
-		//	System.exit(0);
+		
 		synchronized(doingList) {
 			Queue<Todo> queue = new LinkedList<Todo>();
 			while (doingList.size() != 0) {
@@ -227,32 +198,25 @@ public class Trigger extends Object {
 			}
 			doingList = queue;
 		}
-		//if (running) {
-			synchronized(todoList) {
-				Queue<Todo> queue = new LinkedList<Todo>();
-				while (todoList.size() != 0) {
-					Todo todo = todoList.poll();
-					updateWatchdog(todo.getRunnableNameClass(), datetime);
-					if (todo.getSchedule() <= datetime) {
-						if (todo.getLifeTimes() != 0)
-							todo.setDeathTime(datetime + (todo.getLifeTimes() * pulserate)); 
-						todo.start();
-						logger.fine(message("Triger(%d).NEW Thread ID=%d, Name=%s, Queue(%d,%d)", datetime/pulserate,
-								todo.getId(), todo.getName(), todoList.size(), doingList.size() + 1));
-						doingList.add(todo);
-					} else
-						queue.add(todo);
-				}
-				todoList = queue;
+		
+		synchronized(todoList) {
+			Queue<Todo> queue = new LinkedList<Todo>();
+			while (todoList.size() != 0) {
+				Todo todo = todoList.poll();
+				updateWatchdog(todo.getRunnableNameClass(), datetime);
+				if (todo.getSchedule() <= datetime) {
+					if (todo.getLifeTimes() != 0)
+						todo.setDeathTime(datetime + (todo.getLifeTimes() * pulserate)); 
+					todo.start();
+					logger.fine(message("Triger(%d).NEW Thread ID=%d, Name=%s, Queue(%d,%d)", datetime/pulserate,
+							todo.getId(), todo.getName(), todoList.size(), doingList.size() + 1));
+					doingList.add(todo);
+				} else
+					queue.add(todo);
 			}
-		//} else if (stepdown != Long.MAX_VALUE) {
-		//	if ((stepdown + downtime) < datetime)
-		//		System.exit(0);
-			//else if (doingList.size() == 0)
-			//	timer.cancel();
-		//} else {
-		//	stepdown = Calendar.getInstance().getTimeInMillis();
-		//}
+			todoList = queue;
+		}
+		
 		wakeUp(datetime);	
 	}
 	
@@ -267,6 +231,10 @@ public class Trigger extends Object {
 	public static void main(String[] args) {
 		Trigger trigger = Trigger.getInstance();
 		trigger.start();
+	}
+
+	public static String datetime(long date) {
+		return String.format(Locale.US, "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS", date);
 	}
 	
 	public static String datetime(Date date) {
@@ -290,13 +258,13 @@ public class Trigger extends Object {
 		}
 	}
 	
-	private static void wakeUp(long datetime) {
+	private void wakeUp(long datetime) {
 		for (Iterator<String> iterator = watchdog.keySet().iterator(); iterator.hasNext();) {
 			String classname = iterator.next();
 			Long status = watchdog.get(classname);
 			if (status != null) {
 				if (status.longValue() != datetime) {
-					System.out.printf("%s Trigger wakes up \"%s\"%n", datetime(new Date()), classname);
+					logger.warning(message("Trigger wakes up \"%s\"", classname));
 					try {
 						@SuppressWarnings("unchecked")
 						Class<Runnable> classRunnable = (Class<Runnable>) Class.forName(classname);
@@ -310,7 +278,7 @@ public class Trigger extends Object {
 						}
 						todoList.add(new TodoAdapter(runnable,String.format("%s", runnable.getClass().getCanonicalName()), downtime/pulserate));
 					} catch (ClassNotFoundException e) {
-						//logger.severe(message(e));
+						logger.severe(message(e));
 						throw new ObjectException(e);
 					}
 				}

@@ -16,20 +16,15 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.http.client.fluent.Form;
-import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.javath.File;
+import com.javath.OS;
 import com.javath.ObjectException;
-import com.javath.mapping.StreamingBidsOffers;
-import com.javath.mapping.StreamingBidsOffersHome;
-import com.javath.mapping.StreamingBidsOffersId;
 import com.javath.mapping.StreamingOrder;
 import com.javath.mapping.StreamingOrderHome;
 import com.javath.mapping.StreamingOrderId;
-import com.javath.mapping.StreamingTicker;
-import com.javath.mapping.StreamingTickerHome;
-import com.javath.mapping.StreamingTickerId;
 import com.javath.stock.Broker;
 import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
@@ -37,16 +32,10 @@ import com.javath.util.Lock;
 import com.javath.util.Storage;
 import com.javath.util.TodoAdapter;
 import com.javath.util.Trigger;
-import com.javath.util.html.TextNode;
 
 public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	public final static int ERROR_ARGUMENTS_MISMATCH = 1;
-	
-	//public static final String MarketSummary = "S4MarketSummary";
-	//public static final String InstrumentTicker = "S4InstrumentTicker";
-	//public static final String InstrumentInfo = "S4InstrumentInfo";
-	//public static final String MarketTicker = "S4MarketTicker";
 	
 	private final Lock login_process = new Lock();
 	
@@ -468,7 +457,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	private void createStoreMarketTicker(String[] tickers) {
 		String comment = String.format("%s \"%s\"", task, browser_for_runnable.getFileContent());
-		newThread(String.format(Locale.US, "StoreMarketTicker(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+		newThread(String.format(Locale.US, "StoreMarketTicker(%1$s)", Trigger.datetime(new Date())),
 				this, "threadStoreMarketTicker", comment, tickers);
 	}
 	
@@ -484,14 +473,15 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		if (tickers == null)
 			return;
 		Date current = new Date();
-		String filename = String.format(Locale.US, "%1$s%2$sticker.%3$tY%3$tm%3$td.txt", 
-				path.var, file.separator, current);
+		@SuppressWarnings("static-access")
+		String filename = String.format(Locale.US, "%1$s%2$sticker.%3$s.txt", 
+				path.var, file.separator, file.date(current));
 		Storage storage  = Storage.getInstance(filename);
 		try {
 			OutputStreamWriter output = new OutputStreamWriter(storage.append());
 			output.write(String.format("#-- %s%n", comment));
 			
-			String date = String.format(Locale.US, "%1$tY-%1$tm-%1$td", current);
+			String date = OS.date(current);
 			for (int index = 0; index < tickers.length; index++) {
 				String[] tokens = tickers[index].split(",");
 				//String date;
@@ -511,9 +501,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				String symbol = tokens[13];
 				output.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n", 
 						date,type,market,N,time,side,price,close,change,change_percent,sequence,a,b,volume,symbol));
+				Symbol.ticker(symbol,side,price,volume);
 			}
 			output.flush();
-			output.close();
+			//output.close();
+			storage.release();
 		} catch (FileNotFoundException e) {
 			logger.severe(message(e));
 			throw new ObjectException(e);
@@ -523,62 +515,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}
 		
 	}
-	
-	private void storeMarketTicker(String[] tickers) {
-		if (tickers == null)
-			return;
 		
-		StreamingTickerHome home = new StreamingTickerHome();
-		Session session = ((SessionFactory) this.getContext("SessionFactory"))
-		//	.openSession();
-			.getCurrentSession();
-		session.beginTransaction();
-		
-		Calendar calendar = Calendar.getInstance();
-		for (int index = 0; index < tickers.length; index++) {
-			StreamingTickerId id = new StreamingTickerId();
-			StreamingTicker ticker = new StreamingTicker(id);
-			String[] tokens = tickers[index].split(",");
-			//
-			id.setDate(calendar.getTime());
-			id.setMarket(Short.valueOf(tokens[1]));
-			id.setSequence(Integer.valueOf(tokens[9]));
-			//
-			ticker.setId(id);
-			ticker.setType(Short.valueOf(tokens[0]));
-			// market
-			ticker.setN(Short.valueOf(tokens[2]));
-			// time (begin)
-			String[] time = tokens[3].split(":");
-			calendar.set(Calendar.HOUR_OF_DAY,Integer.valueOf(time[0]));
-			calendar.set(Calendar.MINUTE,Integer.valueOf(time[1]));
-			calendar.set(Calendar.SECOND,Integer.valueOf(time[2]));
-			calendar.set(Calendar.MILLISECOND,0);
-			ticker.setTime(calendar.getTime());
-			// time (end)
-			ticker.setSide(tokens[4]);
-			ticker.setPrice(Float.valueOf(tokens[5]));
-			ticker.setClose(Float.valueOf(tokens[6]));
-			ticker.setChange(Float.valueOf(tokens[7]));
-			ticker.setChangePercent(Float.valueOf(tokens[8]));
-			// sequence
-			ticker.setA(tokens[10]);
-			ticker.setB(tokens[11]);
-			ticker.setVolume(Integer.valueOf(tokens[12]));
-			ticker.setSymbol(tokens[13]);
-			
-			home.persist(ticker);
-		}
-		
-		try {
-			session.getTransaction().commit();
-		} catch (org.hibernate.JDBCException e) {
-			logger.severe(message("SQL Error %d, SQLState %s: %s", 
-					e.getErrorCode(), e.getSQLState(), e.getMessage()));
-			session.getTransaction().rollback();
-		}		
-	}
-	
 	private class BidOffer {
 		public String bid_volume = "";
 		public String offer_volume = "";
@@ -586,8 +523,9 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	private void storeBidOffer(String comment, String[] bid_offer, Map<String,String> symbol_date) {
 		Date current = new Date();
-		String filename = String.format(Locale.US, "%1$s%2$sbid.offer.%3$tY%3$tm%3$td.txt", 
-				path.var, file.separator, current);
+		@SuppressWarnings("static-access")
+		String filename = String.format(Locale.US, "%1$s%2$sbid.offer.%3$s.txt", 
+				path.var, file.separator, file.date(current));
 		Storage storage  = Storage.getInstance(filename);
 
 		try {
@@ -602,7 +540,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				Map<String,BidOffer> prices = new HashMap<String,BidOffer>();
 				String[] token = bid_offer[index].split(",");
 				String symbol = token[0];
-				String datetime = String.format(Locale.US, "%1$tY-%1$tm-%1$td %2$s", current, symbol_date.get(symbol));
+				String datetime = String.format(Locale.US, "%1$s %2$s", OS.date(current), symbol_date.get(symbol));
 				// Bid Order
 				for (int order = 0; order < 5; order++) {
 					String price = token[1 + (order * 2)];
@@ -636,74 +574,18 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			}
 			
 			output.flush();
-			output.close();
+			//output.close();
+			storage.release();
 		} catch (FileNotFoundException e) {
 			logger.severe(message(e));
 			throw new ObjectException(e);
 		} catch (IOException e) {
+			logger.severe(message(comment));
 			logger.severe(message(e));
 			throw new ObjectException(e);
 		}
 	}
-	
-	private void storeBidOffer(String[] bid_offer, Map<String,String> symbol_date) {
-		if (bid_offer == null)
-			return;
 		
-		StreamingBidsOffersHome home = new StreamingBidsOffersHome();
-		Session session = ((SessionFactory) this.getContext("SessionFactory"))
-		//	.openSession();
-			.getCurrentSession();
-		session.beginTransaction();
-		Calendar calendar = Calendar.getInstance(); 
-		for (int index = 0; index < bid_offer.length; index++) {
-			// bid_offer = symbol,
-			//		bid_1,bid_vol_1,bid_2,bid_vol_2,bid_3,bid_vol_3,bid_4,bid_vol_4,bid_5,bid_vol_5,
-			//		offer_1,offer_vol_1,offer_2,offer_vol_2,offer_3,offer_vol_3,offer_4,offer_vol_4,offer_5,offer_vol_5
-			String[] token = bid_offer[index].split(",");
-			String[] time = symbol_date.get(token[0]).split(":");
-			calendar.set(Calendar.HOUR_OF_DAY, Integer.valueOf(time[0]));
-			calendar.set(Calendar.MINUTE, Integer.valueOf(time[1]));
-			calendar.set(Calendar.SECOND, Integer.valueOf(time[2]));
-			calendar.set(Calendar.MILLISECOND, 0);
-
-			Date date = calendar.getTime();
-			// Bid Order
-			for (int order = 0; order < 5; order++) {
-				StreamingBidsOffersId id = new StreamingBidsOffersId();
-				id.setSymbol(token[0]);
-				id.setDate(date);
-				id.setPrice(Float.valueOf(token[1 + (order * 2)]));
-				
-				StreamingBidsOffers bids_offers = new StreamingBidsOffers(id);
-				bids_offers.setBidVolume(Long.valueOf(token[2 + (order * 2)]));
-				if (id.getPrice() != 0.00) 
-					home.persist(bids_offers);
-			}
-			// Offer Order
-			for (int order = 0; order < 5; order++) {
-				StreamingBidsOffersId id = new StreamingBidsOffersId();
-				id.setSymbol(token[0]);
-				id.setDate(date);
-				id.setPrice(Float.valueOf(token[11 + (order * 2)]));
-				
-				StreamingBidsOffers bids_offers = new StreamingBidsOffers(id);
-				bids_offers.setOfferVolume(Long.valueOf(token[12 + (order * 2)]));
-				
-				if (id.getPrice() != 0.00) 
-					home.persist(bids_offers);
-			}
-		}
-		
-		try {
-			session.getTransaction().commit();
-		} catch (org.hibernate.JDBCException e) {
-			logger.severe(message("SQL Error %d, SQLState %s: %s", 
-					e.getErrorCode(), e.getSQLState(), e.getMessage()));
-			session.getTransaction().rollback();
-		}	
-	}
-	
 	protected String runService = String.format("%s,%s", Streaming4.MarketSummary, Streaming4.MarketTicker);
 	protected String runInstInfo = "";
 	protected String runInstTicker = "";
@@ -719,7 +601,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	}
 	
 	private void createInstrumentInfo(Map<String, String> symbol_date) {
-		newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+		newThread(String.format(Locale.US, "InstrumentInfo(%1$s)", Trigger.datetime(new Date())),
 				this, "threadInstrumentInfo", task, symbol_date);
 	}
 	
@@ -756,43 +638,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			storeBidOffer(comment, bids_offers, symbol_date);
 		}
 	}
-	
-	private Map<String,String> checkSymbolDate(Map<String,String> symbol_date) {
-		Session session = ((SessionFactory) this.getContext("SessionFactory"))
-				.getCurrentSession();
-		session.beginTransaction();
-		Query query = session.createQuery(
-				"select ticker1.time " +
-				"from StreamingTicker as ticker1 " +
-				"where ticker1.id.date = :date " +
-				"and ticker1.symbol = :symbol " +
-				"and ticker1.id.sequence = (" +
-				  "select max(ticker2.id.sequence) " + 
-				  "from StreamingTicker as ticker2 " +
-				  "where ticker1.id.date = ticker2.id.date " +
-				  "and ticker1.symbol = ticker2.symbol)");
-		Calendar calendar = Calendar.getInstance();
-		query.setDate("date", calendar.getTime());
-		Iterator<String> symbols = symbol_date.keySet().iterator();
-		while (symbols.hasNext()) {
-			String symbol = (String) symbols.next();
-			query.setString("symbol", symbol);
-			Date queryDate = (Date) query.uniqueResult();
-			String[] time = symbol_date.get(symbol).split(":");
-			calendar.set(Calendar.HOUR_OF_DAY, Integer.valueOf(time[0]));
-			calendar.set(Calendar.MINUTE, Integer.valueOf(time[1]));
-			calendar.set(Calendar.SECOND, Integer.valueOf(time[2]) -1);
-			calendar.set(Calendar.MILLISECOND, 0);
-			try {
-				if (queryDate.after(calendar.getTime()))
-					symbol_date.put(symbol, String.format("%1$tH:%1$tM:%1$tS",queryDate));	
-			} catch (NullPointerException e) {}
-			
-		}
-		session.getTransaction().commit();
-		return symbol_date;
-	}
-	
+		
 	public void run() {
 		try {
 			browser_for_runnable.setContext(getHttpContext());
@@ -824,11 +670,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		
 		Trigger trigger = Trigger.getInstance();
 		//trigger.start();
-		String next = String.format(Locale.US, "%1$s \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", this.getClass().getSimpleName(), time);
+		String next = String.format(Locale.US, "%1$s \"%2$s\"", this.getClass().getSimpleName(), Trigger.datetime(time));
 		logger.info(message("Next %1$s", next));
 		task = String.format("%1$s cache in", next);
 		trigger.addTodo(new TodoAdapter(time, this, 
-				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
-				this.getClass().getSimpleName(), time, 5)));
+				String.format(Locale.US, "%1$s(%2$s)", 
+				this.getClass().getSimpleName(), Trigger.datetime(time), 5)));
 	}
 }

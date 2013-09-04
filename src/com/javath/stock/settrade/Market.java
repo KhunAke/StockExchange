@@ -16,6 +16,8 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.w3c.dom.Node;
 
+import com.javath.File;
+import com.javath.OS;
 import com.javath.Object;
 import com.javath.ObjectException;
 import com.javath.util.Browser;
@@ -131,7 +133,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 			
 			MarketStatus status = MarketStatus.getStatus(textNode.getString(8, 4));
 			if (!status.equals(this.status)) {
-				logger.info(message("Status at %1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS is \"%2$s\"", date, status));
+				logger.info(message("Status at %1$s is \"%2$s\"", Trigger.datetime(date), status));
 				this.status = status;
 			}
 			
@@ -159,7 +161,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 	}
 	
 	private void createStoreMarket(String comment, TextNode textNode) {
-		newThread(String.format(Locale.US, "StoreMarket(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", getDateTime()), 
+		newThread(String.format(Locale.US, "StoreMarket(%1$s)", Trigger.datetime(getDateTime())), 
 				this, "threadStoreMarket", comment, getDateTime(), getStatus(), textNode);
 	}
 	
@@ -177,9 +179,10 @@ public class Market extends Object implements Runnable, CustomHandler {
 	}
 	
 	private void storeMarket(String comment, Date date, MarketStatus status, TextNode textNode) {
-		String filename = String.format(Locale.US, "%1$s%2$smarket.%3$tY%3$tm%3$td.%4$s.txt", 
-				path.var, file.separator, date, status);
-		String datetime = String.format(Locale.US, "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS", date);
+		@SuppressWarnings("static-access")
+		String filename = String.format(Locale.US, "%1$s%2$smarket.%3$s.%4$s.txt", 
+				path.var, file.separator, file.date(date), status);
+		String datetime = OS.datetime(date);
 		Storage storage  = Storage.getInstance(filename);
 		try {
 			OutputStreamWriter output = new OutputStreamWriter(storage.append());
@@ -200,7 +203,8 @@ public class Market extends Object implements Runnable, CustomHandler {
 				}
 			}
 			output.flush();
-			output.close();
+			//output.close();
+			storage.release();
 		} catch (FileNotFoundException e) {
 			logger.severe(message(e));
 			throw new ObjectException(e);
@@ -277,7 +281,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 			time = calendar.getTimeInMillis();
 			break;
 		default:
-			logger.warning(message("Unknow Status at %1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS", date));
+			logger.warning(message("Unknow Status at %1$s", Trigger.datetime(date)));
 			if ((current - time) < 15000) // 15 (s) * 1000 (ms)
 				calendar.add(Calendar.SECOND, 16);
 			time = calendar.getTimeInMillis();
@@ -288,7 +292,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 		current = calendar.getTimeInMillis();
 		if (time < current) {
 			calendar.add(Calendar.SECOND, 5);
-			if ((status.equals(MarketStatus.Unknow)) || (status.equals(MarketStatus.Intermission))) {
+			if ((status.equals(MarketStatus.Empty)) || (status.equals(MarketStatus.Intermission))) {
 				time = calendar.getTimeInMillis();
 			} else {
 				nextTask(calendar.getTime());
@@ -297,14 +301,14 @@ public class Market extends Object implements Runnable, CustomHandler {
 		}
 		
 		Trigger trigger = Trigger.getInstance();
-		String market_datetime = String.format(Locale.US, "%1$s \"%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS\"", 
-				this.getClass().getSimpleName(), time);
-		logger.info(message("Last Update \"%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS\" -> Next %2$s", this.date,  market_datetime));
+		String market_datetime = String.format(Locale.US, "%1$s \"%2$s\"", 
+				this.getClass().getSimpleName(), Trigger.datetime(time));
+		logger.info(message("Last Update \"%1$s\" -> Next %2$s", Trigger.datetime(this.date),  market_datetime));
 		task = String.format("%1$s cache in", market_datetime);
 		//trigger.start();
 		trigger.addTodo(new TodoAdapter(time, this, 
-				String.format(Locale.US, "%1$s(%2$tY-%2$tm-%2$tdT%2$tH:%2$tM:%2$tS)", 
-				this.getClass().getSimpleName(), time, 15)));
+				String.format(Locale.US, "%1$s(%2$s)", 
+				this.getClass().getSimpleName(), Trigger.datetime(time), 15)));
 	}
 	
 	public static Date castDate(String format, String data) throws ParseException {

@@ -10,7 +10,7 @@ public class TodoAdapter extends Thread implements Todo {
 	private Object object = null;
 	
 	public TodoAdapter(long schedule, Runnable runnable, String name, long lifeTimes) {
-		super(runnable, name);
+		super(runnable, "#" + name);
 		object = runnable;
 		setSchedule(schedule);
 		setLifeTimes(lifeTimes);

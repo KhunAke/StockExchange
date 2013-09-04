@@ -161,7 +161,7 @@ public class Object {
 				}
 			}
 			
-		}.setExecute(object, methodName, arguments), name);
+		}.setExecute(object, methodName, arguments), "#" + name);
 		thread.start();
 	}
 	
@@ -172,7 +172,7 @@ public class Object {
 	}
 	
 	protected final void newThread(String name, Runnable runnable) {
-		Thread thread = new Thread(runnable, name);
+		Thread thread = new Thread(runnable, "#" + name);
 		thread.start();
 	}
 	

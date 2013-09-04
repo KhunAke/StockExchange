@@ -3,6 +3,7 @@ package com.javath.stock.settrade;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.List;
@@ -10,10 +11,13 @@ import java.util.Locale;
 
 import org.w3c.dom.Node;
 
+import com.javath.OS;
 import com.javath.Object;
 import com.javath.ObjectException;
+import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
 import com.javath.util.Storage;
+import com.javath.util.Trigger;
 import com.javath.util.html.CustomFilter;
 import com.javath.util.html.CustomHandler;
 import com.javath.util.html.HtmlParser;
@@ -54,7 +58,7 @@ public class Board extends Object implements Runnable, CustomHandler {
 	
 	public static void createBoard(String task, Date date, MarketStatus status) {
 		Board board = new Board(task, date, status);
-		board.newThread(String.format(Locale.US, "Board(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", date), 
+		board.newThread(String.format(Locale.US, "Board(%1$s)", Trigger.datetime(date)), 
 				board, "run");
 	}
 
@@ -75,11 +79,11 @@ public class Board extends Object implements Runnable, CustomHandler {
 		try {
 			inputStream = browser.get("http://www.settrade.com/C13_MarketSummaryStockMethod.jsp?method=AOM");
 			HtmlParser parser = new HtmlParser(inputStream);		
-			logger.fine(message("{%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS} Cache in \"%2$s\"", this.date, browser.getFileContent()));
+			logger.fine(message("{%1$s} Cache in \"%2$s\"", Trigger.datetime(this.date), browser.getFileContent()));
 			Market set = Market.getInstance();
 			if (!this.date.equals(set.getDateTime())) {
-				logger.warning(message("Server delayed because request of \"%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS\" but received of \"%2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$tS\"",
-						this.date,  set.getDateTime()));
+				logger.warning(message("Server delayed because request of \"%1$s\" but received of \"%2$s\"",
+						OS.datetime(this.date),  OS.datetime(set.getDateTime())));
 			}
 			CustomFilter filter = new CustomFilter(parser.parse());
 			filter.setHandler(this);
@@ -121,12 +125,15 @@ public class Board extends Object implements Runnable, CustomHandler {
 	}
 	
 	private void store(String comment, Date date, MarketStatus status, TextNode textNode) {
-		String filename = String.format(Locale.US, "%1$s%2$sboard.%3$tY%3$tm%3$td.%4$s.txt", 
-				path.var, file.separator, date, status);
-		String datetime = String.format(Locale.US, "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS", date);
+		@SuppressWarnings("static-access")
+		String filename = String.format(Locale.US, "%1$s%2$sboard.%3$s.%4$s.txt", 
+				path.var, file.separator, file.date(date), status);
+		String datetime = OS.datetime(date);
 		Storage storage  = Storage.getInstance(filename);
+		OutputStream outputStream = null;
 		try {
-			OutputStreamWriter output = new OutputStreamWriter(storage.append());
+			outputStream = storage.append();
+			OutputStreamWriter output = new OutputStreamWriter(outputStream);
 			output.write(String.format("#-- %s%n", comment));
 			
 			for (int index = 1; index < textNode.length(); index++) {
@@ -145,14 +152,16 @@ public class Board extends Object implements Runnable, CustomHandler {
 					String value = Market.replace(data[22]);
 					output.write(String.format("%s,%s,%s,%s,%s,%s,%s,,%s,,%s,%s%n", 
 							symbol,datetime,open,high,low,last,bid,offer,volume,value));
+					Symbol.update(symbol, datetime, open, high, low, last, bid, offer, volume, value);
 				}
 			}
 			
 			output.flush();
-			output.close();
-		} catch (FileNotFoundException e1) {
-			logger.severe(message(e1));
-			throw new ObjectException(e1);
+			//output.close();
+			storage.release();
+		} catch (FileNotFoundException e) {
+			logger.severe(message(e));
+			throw new ObjectException(e);
 		} catch (IOException e) {
 			logger.severe(message(e));
 			throw new ObjectException(e);
