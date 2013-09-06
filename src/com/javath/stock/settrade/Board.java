@@ -14,6 +14,8 @@ import org.w3c.dom.Node;
 import com.javath.OS;
 import com.javath.Object;
 import com.javath.ObjectException;
+import com.javath.mapping.SettradeBoard;
+import com.javath.mapping.SettradeBoardId;
 import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
 import com.javath.util.Storage;
@@ -152,10 +154,11 @@ public class Board extends Object implements Runnable, CustomHandler {
 					String value = Market.replace(data[22]);
 					output.write(String.format("%s,%s,%s,%s,%s,%s,%s,,%s,,%s,%s%n", 
 							symbol,datetime,open,high,low,last,bid,offer,volume,value));
-					Symbol.update(symbol, datetime, open, high, low, last, bid, offer, volume, value);
+					SettradeBoard board = Symbol.createBoard(
+							symbol,datetime,open,high,low,last,bid,"",offer,"",volume,value);
+					Symbol.putBoard(board);
 				}
 			}
-			
 			output.flush();
 			//output.close();
 			storage.release();

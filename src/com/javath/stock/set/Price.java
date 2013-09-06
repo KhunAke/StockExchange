@@ -8,7 +8,7 @@ import java.util.Properties;
 import com.javath.Configuration;
 import com.javath.Object;
 
-public class Price extends Object {
+public class Price extends Object implements Comparable<Price>{
 
 	private static int[][] TickSize = null;
 
@@ -104,5 +104,28 @@ public class Price extends Object {
 		}
 		return -1;
 	}
+
+	@Override
+	public int compareTo(Price obj) {
+		int value = Integer.valueOf(String.format("%.2f",obj.getValue()).replace(".", ""));
+		if (this.value == value)
+			return 0;
+		else {
+			int thisRange = getRange(this.value);
+			int objRange = getRange(value);
+			if (thisRange == objRange)
+				return (this.value - value) / TickSize[thisRange][STEP];
+			else if (thisRange < objRange) {
+				return (this.value - TickSize[thisRange][LessThen]) / TickSize[thisRange][STEP] +
+						new Price((double) TickSize[thisRange][LessThen] / 100).compareTo(obj);
+			} else if (thisRange > objRange) {
+				return -(value - TickSize[objRange][LessThen]) / TickSize[objRange][STEP] -
+				new Price((double) TickSize[objRange][LessThen] / 100).compareTo(this);
+			}
+			throw new RuntimeException();
+		}
+	}
+	
+	
 
 }

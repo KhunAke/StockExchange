@@ -22,9 +22,12 @@ import org.hibernate.SessionFactory;
 import com.javath.File;
 import com.javath.OS;
 import com.javath.ObjectException;
+import com.javath.mapping.StreamingBidsOffers;
 import com.javath.mapping.StreamingOrder;
 import com.javath.mapping.StreamingOrderHome;
 import com.javath.mapping.StreamingOrderId;
+import com.javath.mapping.StreamingTicker;
+import com.javath.mapping.StreamingTickerId;
 import com.javath.stock.Broker;
 import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
@@ -501,7 +504,9 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				String symbol = tokens[13];
 				output.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n", 
 						date,type,market,N,time,side,price,close,change,change_percent,sequence,a,b,volume,symbol));
-				Symbol.ticker(symbol,side,price,volume);
+				StreamingTicker ticker = Symbol.createTicker(
+						date,type,market,N,time,side,price,close,change,change_percent,sequence,a,b,volume,symbol);
+				Symbol.putTicker(ticker);
 			}
 			output.flush();
 			//output.close();
@@ -570,7 +575,21 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 					BidOffer volume = prices.get(price);
 					output.write(String.format("%s,%s,%s,%s,%s%n", 
 							symbol,datetime,price,volume.bid_volume,volume.offer_volume));
+					StreamingBidsOffers bids_offers = Symbol.createBidOffer(symbol,datetime,price,volume.bid_volume,volume.offer_volume);
+					Symbol.setBidOffer(bids_offers);
 				}
+				
+				//if (symbol.equals("PTT")) {
+				System.out.printf("#-- %s%n",symbol);
+				StreamingBidsOffers[] bids_offers = Symbol.get(symbol).getBidsOffers();
+				for (int n = 0; n < bids_offers.length; n++) {
+					try {
+						System.out.printf("%s -> %.2f, %d, %d%n",
+								Trigger.datetime(bids_offers[n].getId().getDate()), bids_offers[n].getId().getPrice(),bids_offers[n].getBidVolume(),bids_offers[n].getOfferVolume());
+					} catch (NullPointerException e) {}
+				}
+				//}
+					
 			}
 			
 			output.flush();

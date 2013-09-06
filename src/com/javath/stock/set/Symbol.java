@@ -1,49 +1,47 @@
 package com.javath.stock.set;
 
-import java.util.Date;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.javath.OS;
 import com.javath.Object;
-import com.javath.stock.settrade.Market;
+import com.javath.mapping.SettradeBoard;
+import com.javath.mapping.SettradeBoardId;
+import com.javath.mapping.StreamingBidsOffers;
+import com.javath.mapping.StreamingBidsOffersId;
+import com.javath.mapping.StreamingTicker;
+import com.javath.mapping.StreamingTickerId;
 
 public class Symbol extends Object {
 	
-	private static final int TICKER_HISTORY = 5;
+	private static final Map<String,Symbol> symbols = new HashMap<String,Symbol>();
+	private static long changeDateTime = 0;
 	
-	private static Map<String,Symbol> symbols = new HashMap<String,Symbol>();
+	public static final Map<String,Symbol> getSymbols() {
+		return symbols;
+	}
 	
-	private boolean changeData = false;
-	private int changePriceStep = 0;
+	public static final long getChangeDateTime() {
+		return changeDateTime;
+	}
 	
 	private String name;
-	private Date datetime;
-	private float open = 0.0f;
-	private float high = 0.0f;
-	private float low = 0.0f;
-	private float last = 0.0f;
-	private float bid = 0.0f;
-	private float offer = 0.0f;
-	private long volume = 0;
-	private double value= 0.0;
+	private float price = 0.0f;
 	
-	private class BidOffer {
-		public float price = 0.0f;
-		public int bid = 0;
-		public int offer = 0;
-	}
-	
-	private class Ticker {
-		public String side;
-		public float price;
-		public int volume;
-	}
-	
-	private Map<Float,BidOffer> bids_offers = new HashMap<Float,BidOffer>();
-	private LinkedList<Ticker> tickers = new LinkedList<Ticker>();
+	private SettradeBoard lastBoard;
+	private final ConcurrentLinkedQueue<SettradeBoard> boards = new ConcurrentLinkedQueue<SettradeBoard>();
+	private StreamingTicker lastTicker;
+	private final ConcurrentLinkedQueue<StreamingTicker> tickers = new ConcurrentLinkedQueue<StreamingTicker>();
+	private final Map<Float,StreamingBidsOffers> bids_offers = new TreeMap<Float,StreamingBidsOffers>();
+	//private final Map<Float,StreamingBidsOffers> bids_offers = new HashMap<Float,StreamingBidsOffers>();
+	//private LinkedList<Ticker> tickers = new LinkedList<Ticker>();
 	
 	private Symbol(String name) {
 		this.name = name;
@@ -62,97 +60,167 @@ public class Symbol extends Object {
 		return name;
 	}
 	
-	public static void update(String name,String datetime,
-			String open,String high,String low,String last,
-			String bid,String offer,String volume,String value) {
-		Symbol symbol = get(name);
-		symbol.update(datetime, open, high, low, last, bid, offer, volume, value);
+	public float getPrice() {
+		return price;
 	}
 	
-	public void update(String datetime,
-			String open,String high,String low,String last,
-			String bid,String offer,String volume,String value) {
-		this.datetime = OS.datetime(datetime);
-		try {
-			this.open = Float.valueOf(open);
-		} catch (NumberFormatException e) {}
-		try {
-			this.high = Float.valueOf(high);
-		} catch (NumberFormatException e) {}
-		try {
-			this.low = Float.valueOf(low);
-		} catch (NumberFormatException e) {}
-		try {
-			float change = Float.valueOf(last);
-			if (this.last != change) {
-				changeData = true;
-				if (this.last > change) 
-					if (changePriceStep > 0) {
-						logger.info(message("%1$s Reversed for %2$d step",name,changePriceStep));
-						changePriceStep = -1;
-					} else
-						changePriceStep -= 1;
-				else if (this.last < change)
-					if (changePriceStep < 0) {
-						logger.info(message("%1$s Reversed for %2$d step",name,changePriceStep));
-						changePriceStep = 1;
-					} else
-						changePriceStep += 1;
-				this.last = change;
-			}
-		} catch (NumberFormatException e) {}
-		try {
-			this.bid = Float.valueOf(bid);
-		} catch (NumberFormatException e) {}
-		try {
-			this.offer = Float.valueOf(offer);
-		} catch (NumberFormatException e) {}
-		try {
-			this.volume = Long.valueOf(volume);
-		} catch (NumberFormatException e) {}
-		try {
-			this.value = Double.valueOf(value);
-		} catch (NumberFormatException e) {}
+	public void setPrice(float price) {
+		this.price = price;
 	}
 	
-	public static void ticker(String name,String side,String price,String volume) {
-		Symbol symbol = get(name);
-		try {
-			symbol.ticker(side, Float.valueOf(price), Integer.valueOf(volume));
-		} catch (NumberFormatException e) {}
+	public static void putBoard(SettradeBoard board) {
+		SettradeBoardId id = board.getId();
+		Symbol symbol = Symbol.get(id.getSymbol());
+		symbol.offerBoard(board);
 	}
 	
-	public void ticker(String side,float price,int volume) {
-		Ticker last = tickers.getLast();
-		if ((last.side == side) && (last.price == price))
-			last.volume += volume;
-		else {
-			Ticker ticker = new Ticker();
-			ticker.side = side;
-			ticker.price = price;
-			ticker.volume = volume;
-			tickers.addLast(ticker);
-			while (tickers.size() > TICKER_HISTORY)
-				tickers.removeFirst();
+	public static SettradeBoard createBoard(String symbol, String datetime,
+			String open, String high, String low, String last,
+			String bid, String bid_volume, String offer, String offer_volume,
+			String volume, String value) {
+		SettradeBoardId id = new SettradeBoardId();
+		id.setSymbol(symbol);
+		id.setDate(OS.date(datetime));
+		SettradeBoard board = new SettradeBoard(id);
+		try {
+			board.setOpen(Float.valueOf(open));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setHigh(Float.valueOf(high));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setLow(Float.valueOf(low));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setLast(Float.valueOf(last));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setBid(Float.valueOf(bid));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setBidVolume(Long.valueOf(bid_volume));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setOffer(Float.valueOf(offer));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setOfferVolume(Long.valueOf(offer_volume));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setVolume(Long.valueOf(volume));
+		} catch (NumberFormatException e) {}
+		try {
+			board.setValue(Double.valueOf(value));
+		} catch (NumberFormatException e) {}
+		return board;
+	}
+	
+	public void offerBoard(SettradeBoard board) {
+		boards.offer(board);
+	}
+	
+	public SettradeBoard pollBoard() {
+		return boards.poll();
+	}
+	
+	public static void putTicker(StreamingTicker ticker) {
+		//StreamingTickerId id = ticker.getId();
+		Symbol symbol = Symbol.get(ticker.getSymbol());
+		symbol.offerTicker(ticker);
+	}
+	
+	public static StreamingTicker createTicker(
+			String date, String type, String market, String N,
+			String time, String side, String price, String close,
+			String change, String change_percent, String sequence,
+			String a, String b, String volume, String symbol) {
+		StreamingTickerId id = new StreamingTickerId();
+		id.setDate(OS.date(date));
+		id.setMarket(Short.valueOf(market));
+		id.setSequence(Integer.valueOf(sequence));
+		StreamingTicker ticker = new StreamingTicker(id);
+		try {
+			ticker.setType(Short.valueOf(type));
+		} catch (NumberFormatException e) {}
+		//ticker.setMarket();
+		try {
+			ticker.setN(Short.valueOf(N));
+		} catch (NumberFormatException e) {}
+		ticker.setTime(OS.datetime(time));
+		try {
+			ticker.setSide(side);
+		} catch (NumberFormatException e) {}
+		try {
+			ticker.setPrice(Float.valueOf(price));
+		} catch (NumberFormatException e) {}
+		try {
+			ticker.setClose(Float.valueOf(close));
+		} catch (NumberFormatException e) {}
+		try {
+			ticker.setChange(Float.valueOf(change));
+		} catch (NumberFormatException e) {}
+		try {
+			ticker.setChangePercent(Float.valueOf(change_percent));
+		} catch (NumberFormatException e) {}
+		//ticker.setSequence();
+		ticker.setA(a);
+		ticker.setB(b);
+		try {
+			ticker.setVolume(Integer.valueOf(volume));
+		} catch (NumberFormatException e) {}
+		ticker.setSymbol(symbol);
+		return ticker;
+	}
+	
+	public void offerTicker(StreamingTicker ticker) {
+		tickers.offer(ticker);
+	}
+	
+	public StreamingTicker pollTicker(StreamingTicker ticker) {
+		return tickers.poll();
+	}
+	
+	public static void setBidOffer(StreamingBidsOffers bid_offer) {
+		StreamingBidsOffersId id = bid_offer.getId();
+		Symbol symbol = Symbol.get(id.getSymbol());
+		symbol.putBidOffer(bid_offer);
+	}
+	
+	public void putBidOffer(StreamingBidsOffers bid_offer) {
+		StreamingBidsOffersId id = bid_offer.getId();
+		bids_offers.put(id.getPrice(), bid_offer);
+	}
+	
+	public StreamingBidsOffers[] getBidsOffers() {
+		bids_offers.size();
+		StreamingBidsOffers[] result = new StreamingBidsOffers[bids_offers.size()];
+		int index = 0;
+		//List<Float> keys = new LinkedList<Float>(bids_offers.keySet());
+        //Collections.sort(keys);
+		for (Iterator<Float> iterator = bids_offers.keySet().iterator(); iterator.hasNext();) {
+			Float key = iterator.next();
+			result[index] = bids_offers.get(key);
+			index += 1;
 		}
+		return result;
 	}
 	
-	public void setBidOffer(String name,String price,String bid_volume,String offer_volume) {
-		Symbol symbol = get(name);
+	public static StreamingBidsOffers createBidOffer(String symbol,String datetime,String price,String bid_volume,String offer_volume) {
+		StreamingBidsOffersId id = new StreamingBidsOffersId();
+		id.setSymbol(symbol);
+		id.setDate(OS.datetime(datetime));
+		id.setPrice(Float.valueOf(price));
+		StreamingBidsOffers bid_offer = new StreamingBidsOffers(id);
 		try {
-			symbol.setLastBidOffer(Float.valueOf(price), Integer.valueOf(bid_volume), Integer.valueOf(offer_volume));
+			bid_offer.setBidVolume(Long.valueOf(bid_volume));
 		} catch (NumberFormatException e) {}
+		try {
+			bid_offer.setOfferVolume(Long.valueOf(offer_volume));
+		} catch (NumberFormatException e) {}
+		return bid_offer;
 	}
 	
-	public void setLastBidOffer(float price, int bidVolume, int offerVolume) {
-		BidOffer bid_offer = bids_offers.get(Float.valueOf(price));
-		if (bid_offer == null) {
-			bid_offer = new BidOffer();
-			bids_offers.put(Float.valueOf(price), bid_offer);
-		}
-		bid_offer.bid = bidVolume;
-		bid_offer.offer = offerVolume;
-	}
+	
 	
 	public static void resetAll() {
 		for (Iterator<String> iterator = symbols.keySet().iterator(); iterator.hasNext();) {
@@ -164,7 +232,6 @@ public class Symbol extends Object {
 	
 	public void reset() {
 		bids_offers.clear();
-		tickers.clear();
 	}
 
 }
