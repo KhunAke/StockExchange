@@ -577,19 +577,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 							symbol,datetime,price,volume.bid_volume,volume.offer_volume));
 					StreamingBidsOffers bids_offers = Symbol.createBidOffer(symbol,datetime,price,volume.bid_volume,volume.offer_volume);
 					Symbol.setBidOffer(bids_offers);
-				}
-				
-				//if (symbol.equals("PTT")) {
-				System.out.printf("#-- %s%n",symbol);
-				StreamingBidsOffers[] bids_offers = Symbol.get(symbol).getBidsOffers();
-				for (int n = 0; n < bids_offers.length; n++) {
-					try {
-						System.out.printf("%s -> %.2f, %d, %d%n",
-								Trigger.datetime(bids_offers[n].getId().getDate()), bids_offers[n].getId().getPrice(),bids_offers[n].getBidVolume(),bids_offers[n].getOfferVolume());
-					} catch (NullPointerException e) {}
-				}
-				//}
-					
+				}	
 			}
 			
 			output.flush();
@@ -694,6 +682,6 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		task = String.format("%1$s cache in", next);
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$s)", 
-				this.getClass().getSimpleName(), Trigger.datetime(time), 5)));
+				this.getClass().getSimpleName(), Trigger.datetime(time)),5));
 	}
 }

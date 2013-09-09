@@ -125,6 +125,15 @@ public class Price extends Object implements Comparable<Price>{
 			throw new RuntimeException();
 		}
 	}
+
+	@Override
+	public String toString() {
+		int range = getRange(value);
+		if (range > 5)
+			return String.format("%.0f",getValue());
+		else
+			return String.format("%.2f",getValue());
+	}
 	
 	
 

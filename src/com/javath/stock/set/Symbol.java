@@ -1,12 +1,10 @@
 package com.javath.stock.set;
 
-import java.util.Collections;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -18,8 +16,10 @@ import com.javath.mapping.StreamingBidsOffers;
 import com.javath.mapping.StreamingBidsOffersId;
 import com.javath.mapping.StreamingTicker;
 import com.javath.mapping.StreamingTickerId;
+import com.javath.util.TodoAdapter;
+import com.javath.util.Trigger;
 
-public class Symbol extends Object {
+public class Symbol extends Object implements Runnable {
 	
 	private static final Map<String,Symbol> symbols = new HashMap<String,Symbol>();
 	private static long changeDateTime = 0;
@@ -32,8 +32,10 @@ public class Symbol extends Object {
 		return changeDateTime;
 	}
 	
-	private String name;
-	private float price = 0.0f;
+	public final String name;
+	public final Price price = new Price(0.0);
+	private final Map<Float,Long> lastMapVolume = new HashMap<Float,Long>();
+	private final Map<Float,Long> MapVolume = new TreeMap<Float,Long>();
 	
 	private SettradeBoard lastBoard;
 	private final ConcurrentLinkedQueue<SettradeBoard> boards = new ConcurrentLinkedQueue<SettradeBoard>();
@@ -58,14 +60,6 @@ public class Symbol extends Object {
 	
 	public String getName() {
 		return name;
-	}
-	
-	public float getPrice() {
-		return price;
-	}
-	
-	public void setPrice(float price) {
-		this.price = price;
 	}
 	
 	public static void putBoard(SettradeBoard board) {
@@ -115,11 +109,11 @@ public class Symbol extends Object {
 		return board;
 	}
 	
-	public void offerBoard(SettradeBoard board) {
+	private void offerBoard(SettradeBoard board) {
 		boards.offer(board);
 	}
 	
-	public SettradeBoard pollBoard() {
+	private SettradeBoard pollBoard() {
 		return boards.poll();
 	}
 	
@@ -176,7 +170,7 @@ public class Symbol extends Object {
 		tickers.offer(ticker);
 	}
 	
-	public StreamingTicker pollTicker(StreamingTicker ticker) {
+	public StreamingTicker pollTicker() {
 		return tickers.poll();
 	}
 	
@@ -220,8 +214,6 @@ public class Symbol extends Object {
 		return bid_offer;
 	}
 	
-	
-	
 	public static void resetAll() {
 		for (Iterator<String> iterator = symbols.keySet().iterator(); iterator.hasNext();) {
 			String name = iterator.next();
@@ -231,7 +223,63 @@ public class Symbol extends Object {
 	}
 	
 	public void reset() {
+		MapVolume.clear();
 		bids_offers.clear();
+	}
+	
+	public boolean change() {
+		if (!boards.isEmpty())
+			return true;
+		if (!tickers.isEmpty())
+			return true;
+		return false;
+	}
+
+	@Override
+	public void run() {
+		while (!boards.isEmpty()) {
+			SettradeBoard board = pollBoard();
+			double price = 0.0;
+			double oldValue = 0.0;
+			double newValue = 0.0;
+			long oldVolume = 0;
+			long newVolume = 0;
+			try {
+				price = board.getLast();
+			} catch (NullPointerException e) {
+				lastBoard = board;
+				continue;
+			}
+			try {
+				oldValue = lastBoard.getValue();
+			} catch (NullPointerException e) {}
+			try {
+				oldVolume = lastBoard.getVolume();
+			} catch (NullPointerException e) {}
+			try {
+				newValue = board.getValue();
+			} catch (NullPointerException e) {}
+			try {
+				newVolume = board.getVolume();
+			} catch (NullPointerException e) {}
+			newValue = newValue - oldValue;
+			newVolume = newVolume - oldVolume;
+			if (newVolume > 0)
+				if (compare(price * newVolume / 1000, newValue))
+					System.out.printf("  %s, %f, %d, %f%n",
+							name, price, newVolume, newValue);
+				else
+					System.out.printf("# %s, %f, %d, %f%n",
+							name, price, newVolume, newValue);
+			lastBoard = board;
+		}
+		while (!tickers.isEmpty()) {
+			lastTicker = pollTicker();
+		}
+	}
+	
+	public boolean compare(double a, double b) {
+		return String.format("%.2f", a).equals(String.format("%.2f", b));
 	}
 
 }

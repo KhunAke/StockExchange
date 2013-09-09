@@ -16,7 +16,6 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.w3c.dom.Node;
 
-import com.javath.File;
 import com.javath.OS;
 import com.javath.Object;
 import com.javath.ObjectException;
@@ -308,7 +307,7 @@ public class Market extends Object implements Runnable, CustomHandler {
 		//trigger.start();
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$s)", 
-				this.getClass().getSimpleName(), Trigger.datetime(time), 15)));
+				this.getClass().getSimpleName(), Trigger.datetime(time)),15));
 	}
 	
 	public static Date castDate(String format, String data) throws ParseException {

@@ -216,7 +216,6 @@ public class Trigger extends Object {
 			}
 			todoList = queue;
 		}
-		
 		wakeUp(datetime);	
 	}
 	
