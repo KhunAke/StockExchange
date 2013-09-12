@@ -1,6 +1,6 @@
 package com.javath.mapping;
 
-// Generated Aug 7, 2013 9:38:49 AM by Hibernate Tools 4.0.0
+// Generated Sep 10, 2013 10:46:29 AM by Hibernate Tools 4.0.0
 
 import java.util.Date;
 
@@ -14,10 +14,10 @@ public class StreamingTicker implements java.io.Serializable {
 	private Short n;
 	private Date time;
 	private String side;
-	private Float price;
-	private Float close;
-	private Float change;
-	private Float changePercent;
+	private Double price;
+	private Double close;
+	private Double change;
+	private Double changePercent;
 	private String a;
 	private String b;
 	private Integer volume;
@@ -31,8 +31,8 @@ public class StreamingTicker implements java.io.Serializable {
 	}
 
 	public StreamingTicker(StreamingTickerId id, Short type, Short n,
-			Date time, String side, Float price, Float close, Float change,
-			Float changePercent, String a, String b, Integer volume,
+			Date time, String side, Double price, Double close, Double change,
+			Double changePercent, String a, String b, Integer volume,
 			String symbol) {
 		this.id = id;
 		this.type = type;
@@ -89,35 +89,35 @@ public class StreamingTicker implements java.io.Serializable {
 		this.side = side;
 	}
 
-	public Float getPrice() {
+	public Double getPrice() {
 		return this.price;
 	}
 
-	public void setPrice(Float price) {
+	public void setPrice(Double price) {
 		this.price = price;
 	}
 
-	public Float getClose() {
+	public Double getClose() {
 		return this.close;
 	}
 
-	public void setClose(Float close) {
+	public void setClose(Double close) {
 		this.close = close;
 	}
 
-	public Float getChange() {
+	public Double getChange() {
 		return this.change;
 	}
 
-	public void setChange(Float change) {
+	public void setChange(Double change) {
 		this.change = change;
 	}
 
-	public Float getChangePercent() {
+	public Double getChangePercent() {
 		return this.changePercent;
 	}
 
-	public void setChangePercent(Float changePercent) {
+	public void setChangePercent(Double changePercent) {
 		this.changePercent = changePercent;
 	}
 

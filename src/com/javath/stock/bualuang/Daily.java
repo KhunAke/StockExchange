@@ -158,10 +158,10 @@ public class Daily extends Object implements Runnable {
 					BualuangBoardDailyId id = new BualuangBoardDailyId(textField.getValue(textField.getID("Symbol")),
 							format.parse(textField.getValue(textField.getID("Date"))));
 					BualuangBoardDaily board = new BualuangBoardDaily(id, 
-							Float.valueOf(textField.getValue(textField.getID("Open"))),
-							Float.valueOf(textField.getValue(textField.getID("High"))),
-							Float.valueOf(textField.getValue(textField.getID("Low"))),
-							Float.valueOf(textField.getValue(textField.getID("Close"))), 
+							Double.valueOf(textField.getValue(textField.getID("Open"))),
+							Double.valueOf(textField.getValue(textField.getID("High"))),
+							Double.valueOf(textField.getValue(textField.getID("Low"))),
+							Double.valueOf(textField.getValue(textField.getID("Close"))), 
 							Long.valueOf(textField.getValue(textField.getID("Volume"))),
 							Double.valueOf(textField.getValue(textField.getID("Value"))));
 						home.persist(board);

@@ -1,6 +1,6 @@
 package com.javath.mapping;
 
-// Generated Aug 7, 2013 9:38:49 AM by Hibernate Tools 4.0.0
+// Generated Sep 10, 2013 10:46:29 AM by Hibernate Tools 4.0.0
 
 import java.util.Date;
 
@@ -11,12 +11,12 @@ public class StreamingBidsOffersId implements java.io.Serializable {
 
 	private String symbol;
 	private Date date;
-	private float price;
+	private double price;
 
 	public StreamingBidsOffersId() {
 	}
 
-	public StreamingBidsOffersId(String symbol, Date date, float price) {
+	public StreamingBidsOffersId(String symbol, Date date, double price) {
 		this.symbol = symbol;
 		this.date = date;
 		this.price = price;
@@ -38,11 +38,11 @@ public class StreamingBidsOffersId implements java.io.Serializable {
 		this.date = date;
 	}
 
-	public float getPrice() {
+	public double getPrice() {
 		return this.price;
 	}
 
-	public void setPrice(float price) {
+	public void setPrice(double price) {
 		this.price = price;
 	}
 

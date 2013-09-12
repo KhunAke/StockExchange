@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
 "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
-<!-- Generated Aug 7, 2013 9:38:50 AM by Hibernate Tools 4.0.0 -->
+<!-- Generated Sep 10, 2013 10:46:29 AM by Hibernate Tools 4.0.0 -->
 <hibernate-mapping>
     <class name="com.javath.mapping.SettradeBoard" table="settrade_board" schema="public">
         <composite-id name="id" class="com.javath.mapping.SettradeBoardId">
@@ -12,26 +12,26 @@
                 <column name="date" length="29" />
             </key-property>
         </composite-id>
-        <property name="last" type="java.lang.Float">
-            <column name="last" precision="8" scale="8" />
+        <property name="open" type="java.lang.Double">
+            <column name="open" precision="17" scale="17" />
         </property>
-        <property name="open" type="java.lang.Float">
-            <column name="open" precision="8" scale="8" />
+        <property name="high" type="java.lang.Double">
+            <column name="high" precision="17" scale="17" />
         </property>
-        <property name="high" type="java.lang.Float">
-            <column name="high" precision="8" scale="8" />
+        <property name="low" type="java.lang.Double">
+            <column name="low" precision="17" scale="17" />
         </property>
-        <property name="low" type="java.lang.Float">
-            <column name="low" precision="8" scale="8" />
+        <property name="last" type="java.lang.Double">
+            <column name="last" precision="17" scale="17" />
         </property>
-        <property name="bid" type="java.lang.Float">
-            <column name="bid" precision="8" scale="8" />
+        <property name="bid" type="java.lang.Double">
+            <column name="bid" precision="17" scale="17" />
         </property>
         <property name="bidVolume" type="java.lang.Long">
             <column name="bid_volume" />
         </property>
-        <property name="offer" type="java.lang.Float">
-            <column name="offer" precision="8" scale="8" />
+        <property name="offer" type="java.lang.Double">
+            <column name="offer" precision="17" scale="17" />
         </property>
         <property name="offerVolume" type="java.lang.Long">
             <column name="offer_volume" />

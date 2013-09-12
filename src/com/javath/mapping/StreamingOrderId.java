@@ -1,6 +1,6 @@
 package com.javath.mapping;
 
-// Generated Aug 7, 2013 9:38:49 AM by Hibernate Tools 4.0.0
+// Generated Sep 10, 2013 10:46:29 AM by Hibernate Tools 4.0.0
 
 import java.util.Date;
 

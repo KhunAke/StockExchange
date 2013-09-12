@@ -1,9 +1,7 @@
 package com.javath.stock.set;
 
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -16,8 +14,6 @@ import com.javath.mapping.StreamingBidsOffers;
 import com.javath.mapping.StreamingBidsOffersId;
 import com.javath.mapping.StreamingTicker;
 import com.javath.mapping.StreamingTickerId;
-import com.javath.util.TodoAdapter;
-import com.javath.util.Trigger;
 
 public class Symbol extends Object implements Runnable {
 	
@@ -34,14 +30,16 @@ public class Symbol extends Object implements Runnable {
 	
 	public final String name;
 	public final Price price = new Price(0.0);
-	private final Map<Float,Long> lastMapVolume = new HashMap<Float,Long>();
-	private final Map<Float,Long> MapVolume = new TreeMap<Float,Long>();
+	public int reversed = 0;
+	
+	private final Map<Double,Long> lastMapVolume = new HashMap<Double,Long>();
+	private final Map<Double,Long> MapVolume = new TreeMap<Double,Long>();
 	
 	private SettradeBoard lastBoard;
 	private final ConcurrentLinkedQueue<SettradeBoard> boards = new ConcurrentLinkedQueue<SettradeBoard>();
 	private StreamingTicker lastTicker;
 	private final ConcurrentLinkedQueue<StreamingTicker> tickers = new ConcurrentLinkedQueue<StreamingTicker>();
-	private final Map<Float,StreamingBidsOffers> bids_offers = new TreeMap<Float,StreamingBidsOffers>();
+	private final Map<Double,StreamingBidsOffers> bids_offers = new TreeMap<Double,StreamingBidsOffers>();
 	//private final Map<Float,StreamingBidsOffers> bids_offers = new HashMap<Float,StreamingBidsOffers>();
 	//private LinkedList<Ticker> tickers = new LinkedList<Ticker>();
 	
@@ -77,25 +75,25 @@ public class Symbol extends Object implements Runnable {
 		id.setDate(OS.date(datetime));
 		SettradeBoard board = new SettradeBoard(id);
 		try {
-			board.setOpen(Float.valueOf(open));
+			board.setOpen(Double.valueOf(open));
 		} catch (NumberFormatException e) {}
 		try {
-			board.setHigh(Float.valueOf(high));
+			board.setHigh(Double.valueOf(high));
 		} catch (NumberFormatException e) {}
 		try {
-			board.setLow(Float.valueOf(low));
+			board.setLow(Double.valueOf(low));
 		} catch (NumberFormatException e) {}
 		try {
-			board.setLast(Float.valueOf(last));
+			board.setLast(Double.valueOf(last));
 		} catch (NumberFormatException e) {}
 		try {
-			board.setBid(Float.valueOf(bid));
+			board.setBid(Double.valueOf(bid));
 		} catch (NumberFormatException e) {}
 		try {
 			board.setBidVolume(Long.valueOf(bid_volume));
 		} catch (NumberFormatException e) {}
 		try {
-			board.setOffer(Float.valueOf(offer));
+			board.setOffer(Double.valueOf(offer));
 		} catch (NumberFormatException e) {}
 		try {
 			board.setOfferVolume(Long.valueOf(offer_volume));
@@ -145,16 +143,16 @@ public class Symbol extends Object implements Runnable {
 			ticker.setSide(side);
 		} catch (NumberFormatException e) {}
 		try {
-			ticker.setPrice(Float.valueOf(price));
+			ticker.setPrice(Double.valueOf(price));
 		} catch (NumberFormatException e) {}
 		try {
-			ticker.setClose(Float.valueOf(close));
+			ticker.setClose(Double.valueOf(close));
 		} catch (NumberFormatException e) {}
 		try {
-			ticker.setChange(Float.valueOf(change));
+			ticker.setChange(Double.valueOf(change));
 		} catch (NumberFormatException e) {}
 		try {
-			ticker.setChangePercent(Float.valueOf(change_percent));
+			ticker.setChangePercent(Double.valueOf(change_percent));
 		} catch (NumberFormatException e) {}
 		//ticker.setSequence();
 		ticker.setA(a);
@@ -191,8 +189,8 @@ public class Symbol extends Object implements Runnable {
 		int index = 0;
 		//List<Float> keys = new LinkedList<Float>(bids_offers.keySet());
         //Collections.sort(keys);
-		for (Iterator<Float> iterator = bids_offers.keySet().iterator(); iterator.hasNext();) {
-			Float key = iterator.next();
+		for (Iterator<Double> iterator = bids_offers.keySet().iterator(); iterator.hasNext();) {
+			Double key = iterator.next();
 			result[index] = bids_offers.get(key);
 			index += 1;
 		}
@@ -264,19 +262,54 @@ public class Symbol extends Object implements Runnable {
 			} catch (NullPointerException e) {}
 			newValue = newValue - oldValue;
 			newVolume = newVolume - oldVolume;
+			int step = this.price.compareTo(new Price(price));
+			
+			
 			if (newVolume > 0)
 				if (compare(price * newVolume / 1000, newValue))
-					System.out.printf("  %s, %f, %d, %f%n",
+					;
+					//System.out.printf("  %s, %f, %d, %f%n",
+					//		name, price, newVolume, newValue);
+				else {
+					System.out.printf("#,%s,%f,%d,%f%n",
 							name, price, newVolume, newValue);
-				else
-					System.out.printf("# %s, %f, %d, %f%n",
-							name, price, newVolume, newValue);
+					splitPrice(name,price, newVolume, newValue);
+				}
 			lastBoard = board;
 		}
 		while (!tickers.isEmpty()) {
 			lastTicker = pollTicker();
 		}
 	}
+	
+	public static void splitPrice(String name,double price, long volume, double value) {
+		double avg = ((value * 1000) / volume);
+		Price base = new Price(price);
+		System.out.printf("@,%s,%f,,%f%n",name,(price * volume) / 10,value * 100);
+		if (Math.round((price * volume) / 10) > Math.round(value * 100)) {
+			double price_p1 = base.previous(1);
+			double price_p0 = base.previous(0);
+			long volume_p1 = Long.valueOf(String.format("%.0f", 
+					(volume * (avg - price_p0)) / (price_p1 - price_p0)));
+			long volume_p0 = Long.valueOf(String.format("%.0f", 
+					(volume * (avg - price_p1)) / (price_p0 - price_p1)));
+			System.out.printf("-,%s,%f,%d,%f%n",
+					name, price_p1, volume_p1, price_p1 * volume_p1);
+			System.out.printf("-,%s,%f,%d,%f%n",
+					name, price_p0, volume_p0, price_p0 * volume_p0);
+		} else {
+			double price_n0 = base.next(0);
+			double price_n1 = base.next(1);
+			long volume_n0 = Long.valueOf(String.format("%.0f", 
+					(volume * (avg - price_n1)) / (price_n0 - price_n1)));
+			long volume_n1 = Long.valueOf(String.format("%.0f", 
+					(volume * (avg - price_n0)) / (price_n1 - price_n0)));
+			System.out.printf("+,%s,%f,%d,%f%n",
+					name, price_n0, volume_n0, price_n0 * volume_n0);
+			System.out.printf("+,%s,%f,%d,%f%n",
+					name, price_n1, volume_n1, price_n1 * volume_n1);
+		}
+	} 
 	
 	public boolean compare(double a, double b) {
 		return String.format("%.2f", a).equals(String.format("%.2f", b));

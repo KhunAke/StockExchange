@@ -209,7 +209,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		order.setId(id);
 		order.setOrderNo(Long.valueOf(data[0]));
 		order.setSide(data[4]);
-		order.setPrice(Float.valueOf(data[5]));
+		order.setPrice(Double.valueOf(data[5]));
 		order.setVolume(Integer.valueOf(data[6]));
 		order.setMatch(Integer.valueOf(data[7]));
 		order.setBalance(Integer.valueOf(data[8]));

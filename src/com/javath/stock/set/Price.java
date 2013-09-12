@@ -58,6 +58,10 @@ public class Price extends Object implements Comparable<Price>{
 	public void setValue(double value) {
 		this.value = (int) (value * 100);
 	}
+	
+	public void setValue(float value) {
+		setValue(Double.valueOf(String.format("%.4f", value)));
+	}
 
 	public double getValue() {
 		return (double) this.value / 100;

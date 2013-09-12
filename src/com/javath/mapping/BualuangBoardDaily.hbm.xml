@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
 "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
-<!-- Generated Aug 7, 2013 9:38:50 AM by Hibernate Tools 4.0.0 -->
+<!-- Generated Sep 10, 2013 10:46:29 AM by Hibernate Tools 4.0.0 -->
 <hibernate-mapping>
     <class name="com.javath.mapping.BualuangBoardDaily" table="bualuang_board_daily" schema="public">
         <composite-id name="id" class="com.javath.mapping.BualuangBoardDailyId">
@@ -12,17 +12,17 @@
                 <column name="date" length="13" />
             </key-property>
         </composite-id>
-        <property name="open" type="java.lang.Float">
-            <column name="open" precision="8" scale="8" />
+        <property name="open" type="java.lang.Double">
+            <column name="open" precision="17" scale="17" />
         </property>
-        <property name="high" type="java.lang.Float">
-            <column name="high" precision="8" scale="8" />
+        <property name="high" type="java.lang.Double">
+            <column name="high" precision="17" scale="17" />
         </property>
-        <property name="low" type="java.lang.Float">
-            <column name="low" precision="8" scale="8" />
+        <property name="low" type="java.lang.Double">
+            <column name="low" precision="17" scale="17" />
         </property>
-        <property name="close" type="java.lang.Float">
-            <column name="close" precision="8" scale="8" />
+        <property name="close" type="java.lang.Double">
+            <column name="close" precision="17" scale="17" />
         </property>
         <property name="volume" type="java.lang.Long">
             <column name="volume" />

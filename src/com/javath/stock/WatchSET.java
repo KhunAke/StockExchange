@@ -1,6 +1,7 @@
 package com.javath.stock;
 
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -22,14 +23,12 @@ public class WatchSET extends Object implements Runnable {
 	
 	@Override
 	public void run() {
-		Calendar calendar = Calendar.getInstance();
-		long current = calendar.getTimeInMillis();
-		if (Symbol.getChangeDateTime() < current) {
-			for (Iterator<String> iterator = symbols.keySet().iterator(); iterator.hasNext();) {
-				String name = iterator.next();
-				Symbol symbol = symbols.get(name);
-				symbol.run();
-			}
+		//Calendar calendar = Calendar.getInstance();
+		Date date = new Date();
+		for (Iterator<String> iterator = symbols.keySet().iterator(); iterator.hasNext();) {
+			String name = iterator.next();
+			Symbol symbol = symbols.get(name);
+			newThread(String.format("%s(%s)",name,Trigger.datetime(date)), symbol);
 		}
 		nextTask();
 	}
