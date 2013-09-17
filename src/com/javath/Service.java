@@ -4,6 +4,9 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Properties;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -14,10 +17,22 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 
 import com.javath.util.Trigger;
 
 public class Service implements Daemon {
+	
+	public static Session getSession() {
+		try {
+			return ((SessionFactory) new InitialContext().lookup("SessionFactory"))
+					.getCurrentSession();
+		} catch (NamingException e) {
+			//logger.severe(message(e));
+			throw new ObjectException(e);
+		}
+	}
 
 	@Override
 	public void destroy() {

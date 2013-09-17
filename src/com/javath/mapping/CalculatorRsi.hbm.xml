@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated Sep 17, 2013 2:05:15 PM by Hibernate Tools 4.0.0 -->
+<hibernate-mapping>
+    <class name="com.javath.mapping.CalculatorRsi" table="calculator_rsi" schema="public">
+        <composite-id name="id" class="com.javath.mapping.CalculatorRsiId">
+            <key-property name="symbol" type="string">
+                <column name="symbol" length="16" />
+            </key-property>
+            <key-property name="parameter" type="short">
+                <column name="parameter" />
+            </key-property>
+        </composite-id>
+        <property name="datetime" type="timestamp">
+            <column name="datetime" length="29" />
+        </property>
+        <property name="smaGain" type="java.lang.Double">
+            <column name="sma_gain" precision="17" scale="17" />
+        </property>
+        <property name="smaLoss" type="java.lang.Double">
+            <column name="sma_loss" precision="17" scale="17" />
+        </property>
+    </class>
+</hibernate-mapping>

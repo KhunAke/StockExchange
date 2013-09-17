@@ -11,13 +11,13 @@ import org.hibernate.SessionFactory;
 import static org.hibernate.criterion.Example.create;
 
 /**
- * Home object for domain model class BualuangBoardDaily.
- * @see com.javath.mapping.BualuangBoardDaily
+ * Home object for domain model class ParameterRsi.
+ * @see com.javath.mapping.ParameterRsi
  * @author Hibernate Tools
  */
-public class BualuangBoardDailyHome {
+public class ParameterRsiHome {
 
-    private static final Log log = LogFactory.getLog(BualuangBoardDailyHome.class);
+    private static final Log log = LogFactory.getLog(ParameterRsiHome.class);
 
     private final SessionFactory sessionFactory = getSessionFactory();
     
@@ -31,8 +31,8 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public void persist(BualuangBoardDaily transientInstance) {
-        log.debug("persisting BualuangBoardDaily instance");
+    public void persist(ParameterRsi transientInstance) {
+        log.debug("persisting ParameterRsi instance");
         try {
             sessionFactory.getCurrentSession().persist(transientInstance);
             log.debug("persist successful");
@@ -43,8 +43,8 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public void attachDirty(BualuangBoardDaily instance) {
-        log.debug("attaching dirty BualuangBoardDaily instance");
+    public void attachDirty(ParameterRsi instance) {
+        log.debug("attaching dirty ParameterRsi instance");
         try {
             sessionFactory.getCurrentSession().saveOrUpdate(instance);
             log.debug("attach successful");
@@ -55,8 +55,8 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public void attachClean(BualuangBoardDaily instance) {
-        log.debug("attaching clean BualuangBoardDaily instance");
+    public void attachClean(ParameterRsi instance) {
+        log.debug("attaching clean ParameterRsi instance");
         try {
             sessionFactory.getCurrentSession().lock(instance, LockMode.NONE);
             log.debug("attach successful");
@@ -67,8 +67,8 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public void delete(BualuangBoardDaily persistentInstance) {
-        log.debug("deleting BualuangBoardDaily instance");
+    public void delete(ParameterRsi persistentInstance) {
+        log.debug("deleting ParameterRsi instance");
         try {
             sessionFactory.getCurrentSession().delete(persistentInstance);
             log.debug("delete successful");
@@ -79,10 +79,10 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public BualuangBoardDaily merge(BualuangBoardDaily detachedInstance) {
-        log.debug("merging BualuangBoardDaily instance");
+    public ParameterRsi merge(ParameterRsi detachedInstance) {
+        log.debug("merging ParameterRsi instance");
         try {
-            BualuangBoardDaily result = (BualuangBoardDaily) sessionFactory.getCurrentSession()
+            ParameterRsi result = (ParameterRsi) sessionFactory.getCurrentSession()
                     .merge(detachedInstance);
             log.debug("merge successful");
             return result;
@@ -93,11 +93,11 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public BualuangBoardDaily findById( com.javath.mapping.BualuangBoardDailyId id) {
-        log.debug("getting BualuangBoardDaily instance with id: " + id);
+    public ParameterRsi findById( short id) {
+        log.debug("getting ParameterRsi instance with id: " + id);
         try {
-            BualuangBoardDaily instance = (BualuangBoardDaily) sessionFactory.getCurrentSession()
-                    .get("com.javath.mapping.BualuangBoardDaily", id);
+            ParameterRsi instance = (ParameterRsi) sessionFactory.getCurrentSession()
+                    .get("com.javath.mapping.ParameterRsi", id);
             if (instance==null) {
                 log.debug("get successful, no instance found");
             }
@@ -112,11 +112,11 @@ public class BualuangBoardDailyHome {
         }
     }
     
-    public List<BualuangBoardDaily> findByExample(BualuangBoardDaily instance) {
-        log.debug("finding BualuangBoardDaily instance by example");
+    public List<ParameterRsi> findByExample(ParameterRsi instance) {
+        log.debug("finding ParameterRsi instance by example");
         try {
-            List<BualuangBoardDaily> results = (List<BualuangBoardDaily>) sessionFactory.getCurrentSession()
-                    .createCriteria("com.javath.mapping.BualuangBoardDaily")
+            List<ParameterRsi> results = (List<ParameterRsi>) sessionFactory.getCurrentSession()
+                    .createCriteria("com.javath.mapping.ParameterRsi")
                     .add( create(instance) )
             .list();
             log.debug("find by example successful, result size: " + results.size());
