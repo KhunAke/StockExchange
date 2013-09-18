@@ -647,27 +647,19 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	}
 		
 	public void run() {
-		try {
-			browser_for_runnable.setContext(getHttpContext());
-			setNewInstInfo(runInstInfo);
-			setNewInstTicker(runInstTicker);
-			setNewMarket(runMarket);
-			setNewMarket2(runMarket2);
-			setNewSum2(runSum2);
-			DataProviderBinary dataBinary = dataProviderBinary(browser_for_runnable, runService);
-			// new Thread
-			createStoreMarketTicker(dataBinary.getMarketTicker());
-			createInstrumentInfo(dataBinary.getSymbolDate());
-			//newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
-			//		this, "threadInstrumentInfo", dataBinary.getSymbolDate());
-			nextTask(5);
-		} catch (Exception e) {
-			logger.severe(message(e));
-			nextTask(0);
-		} catch (ThreadDeath e) {
-			logger.severe(message(e));
-			nextTask(0);
-		} finally {}
+		browser_for_runnable.setContext(getHttpContext());
+		setNewInstInfo(runInstInfo);
+		setNewInstTicker(runInstTicker);
+		setNewMarket(runMarket);
+		setNewMarket2(runMarket2);
+		setNewSum2(runSum2);
+		DataProviderBinary dataBinary = dataProviderBinary(browser_for_runnable, runService);
+		// new Thread
+		createStoreMarketTicker(dataBinary.getMarketTicker());
+		createInstrumentInfo(dataBinary.getSymbolDate());
+		//newThread(String.format(Locale.US, "InstrumentInfo(%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS)", new Date()),
+		//		this, "threadInstrumentInfo", dataBinary.getSymbolDate());
+		nextTask(5);
 	}
 	
 	protected void nextTask(int second) {

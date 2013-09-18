@@ -66,14 +66,7 @@ public class Board extends Object implements Runnable, CustomHandler {
 
 	@Override
 	public void run() {
-		try {
-			getWebPage();
-		} catch (Exception e){
-			logger.severe(message(e));
-		} catch (ThreadDeath e) {
-			logger.severe(message(e));
-		} finally {
-		}
+		getWebPage();
 	}
 	
 	private void getWebPage() {

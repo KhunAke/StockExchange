@@ -83,15 +83,8 @@ public class Market extends Object implements Runnable, CustomHandler {
 
 	@Override
 	public void run() {
-		try {
-			getWebPage();	
-		} catch (Exception e){
-			logger.severe(message(e));
-		} catch (ThreadDeath e) {
-			logger.severe(message(e));
-		} finally {
-			nextTask(getDateTime());
-		}
+		getWebPage();	
+		nextTask(getDateTime());
 	}
 	
 	private void getWebPage() {
