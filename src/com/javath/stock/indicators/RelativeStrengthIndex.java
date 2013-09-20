@@ -28,10 +28,6 @@ public class RelativeStrengthIndex extends Object {
 	private ParameterRsi parameter;
 	private CalculatorRsi calculator;
 	
-	static {
-		
-	}
-	
 	public static ParameterRsi getParameter(int id) {
 		Session session = Service.getSession();
 		session.beginTransaction();

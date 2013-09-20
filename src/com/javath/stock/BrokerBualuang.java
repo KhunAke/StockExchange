@@ -89,8 +89,8 @@ public class BrokerBualuang extends FlashStreaming {
 				logger.info(message("State-%d Authentication Success.",state));
 				// Cookie Received : __txtUserRef, __txtBrokerId
 				browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
-				logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
-				logger.finest(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
+				logger.info(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
+				logger.info(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
 				
 				browser.get(String.format("https://we06.settrade.com/multimarket/redirect_page.jsp?" +
 						"txtPage=streaming4&" +

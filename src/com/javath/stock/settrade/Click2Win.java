@@ -1,4 +1,4 @@
-package com.javath.stock;
+package com.javath.stock.settrade;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -16,13 +16,12 @@ import org.w3c.dom.Node;
 
 import com.javath.Configuration;
 import com.javath.ObjectException;
-import com.javath.stock.settrade.FlashStreaming;
 import com.javath.util.Browser;
 import com.javath.util.html.FormFilter;
 import com.javath.util.html.HtmlParser;
 import com.javath.util.html.InputFilter;
 
-public class BrokerClick2Win extends FlashStreaming {
+public class Click2Win extends FlashStreaming {
 	
 	private static String defaultUserName;
 	
@@ -53,7 +52,7 @@ public class BrokerClick2Win extends FlashStreaming {
 			for (int index = 0; index < numberOfAccount; index++) {
 				String username = properties.getProperty("username." + (index+1));
 				String password = Configuration.decrypt(properties.getProperty("password." + (index+1)));
-				BrokerClick2Win broker = new BrokerClick2Win(username, password);
+				Click2Win broker = new Click2Win(username, password);
 				putBroker(username, broker);
 			}
 			propsFile.close();
@@ -74,13 +73,12 @@ public class BrokerClick2Win extends FlashStreaming {
 		url_dataproviderbinary = "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
 	}
 	
-	public static BrokerClick2Win getInstance() {
-		return (BrokerClick2Win) getBroker(defaultUserName, 
-				BrokerClick2Win.class.getCanonicalName());
+	public static Click2Win getInstance() {
+		return (Click2Win) getBroker(defaultUserName, 
+				Click2Win.class.getCanonicalName());
 	}
 	
-	public BrokerClick2Win(String username, String password) {
-		this.url_init();
+	public Click2Win(String username, String password) {
 		this.username = username;
 		this.password = password;
 		this.browser = new Browser(getHttpContext());

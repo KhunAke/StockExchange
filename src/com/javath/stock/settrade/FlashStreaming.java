@@ -107,6 +107,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		browser_for_runnable = new Browser();
 		setHttpContext(browser_for_runnable.getContext());
 		browser_for_runnable.setTimeOut(5000);
+		url_init();
 	}
 	
 	public long synctime() {
@@ -137,7 +138,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			dataProvider = new DataProvider().read(browser.getInputStream());
 		} catch (ObjectException e) {
 			if (e.getMessage().equals("Unauthorized Access.")) {
-				logger.warning(message("Unauthorised Access"));
+				logger.warning(message("Unauthorized Access"));
 				if (lockLoginProcess(true))
 					synchronized (httpContext) {
 						setHttpContext(login(browser));
