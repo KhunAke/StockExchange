@@ -10,7 +10,6 @@ import com.javath.util.Browser;
 
 public abstract class Broker extends Object {
 	
-	public static final double CommissionRate = 0.1689;
 	// Key is username@classname
 	private static Map<String,Broker> brokers = new HashMap<String,Broker>();
 	
@@ -27,10 +26,11 @@ public abstract class Broker extends Object {
 	protected HttpContext httpContext;
 	
 	protected abstract HttpContext login(Browser browser);
+	public abstract double getCommissionRate();
 	public abstract void portfolio();
-	public abstract void buy(String symbol, double price, long volume);
-	public abstract void sell(String symbol, double price, long volume); 
-	public abstract void cancel(String symbol,  String orderNo);
+	public abstract long buy(String symbol, double price, long volume);
+	public abstract long sell(String symbol, double price, long volume); 
+	public abstract boolean cancel(String symbol,  String orderNo);
 
 	public HttpContext getHttpContext() {
 		synchronized (httpContext) {

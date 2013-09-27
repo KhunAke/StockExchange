@@ -58,19 +58,14 @@ public class DataProvider extends Object {
 			input.read(buffer);
 			String result = StringUtils.newStringUsAscii(buffer);
 			logger.finest(message("%s", result.trim()));
-			String[] responses = result.split("[~]");
-			data = new String[responses.length][][];
-			for (int response = 0; response < responses.length; response++) {
-				String[] services = responses[response].split("[\\^]");
-				data[response] = new String[services.length][];
-				for (int service = 0; service < services.length; service++) {
-					String[] fields = services[service].split("[|]");
-					data[response][service] = new String[fields.length];
-					for (int field = 0; field < fields.length; field++) {
-						data[response][service][field] = fields[field];
-					}
-				}
-			}
+			
+			read(result);
+			
+			if (get(0, 0, 0).equals("T"))
+				return this;
+			else if (get(0, 0, 0).equals("F"))
+				throw newObjectException(ERROR_MESSAGE_FAIL);
+			
 			if (getNumberOfServices() > 0)
 				if (data[2][2][0].equals("F"))
 					throw newObjectException(ERROR_MESSAGE_FAIL, data[2][5][0].trim());
@@ -78,6 +73,22 @@ public class DataProvider extends Object {
 		} catch (IOException e) {
 			logger.severe(message(e));
 			return null;
+		}
+	}
+	
+	public void read(String input) {
+		String[] responses = input.split("[~]");
+		data = new String[responses.length][][];
+		for (int response = 0; response < responses.length; response++) {
+			String[] services = responses[response].split("[\\^]");
+			data[response] = new String[services.length][];
+			for (int service = 0; service < services.length; service++) {
+				String[] fields = services[service].split("[|]");
+				data[response][service] = new String[fields.length];
+				for (int field = 0; field < fields.length; field++) {
+					data[response][service][field] = fields[field];
+				}
+			}
 		}
 	}
 	

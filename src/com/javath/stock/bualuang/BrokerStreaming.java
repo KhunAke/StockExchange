@@ -7,8 +7,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import java.util.regex.Pattern;
 
-import org.apache.http.NameValuePair;
 import org.apache.http.client.fluent.Form;
 import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.NamedNodeMap;
@@ -16,11 +16,13 @@ import org.w3c.dom.Node;
 
 import com.javath.Configuration;
 import com.javath.ObjectException;
+import com.javath.stock.settrade.DataProvider;
 import com.javath.stock.settrade.FlashStreaming;
 import com.javath.util.Browser;
 import com.javath.util.html.FormFilter;
 import com.javath.util.html.HtmlParser;
 import com.javath.util.html.InputFilter;
+import com.javath.util.html.ParamFilter;
 
 public class BrokerStreaming extends FlashStreaming {
 	
@@ -58,14 +60,6 @@ public class BrokerStreaming extends FlashStreaming {
 			throw new ObjectException(e);
 		}
 	}
-
-	@Override
-	protected void url_init() {
-		url_synctime = "https://wmi2.settrade.com/realtime/streaming4/synctime.jsp";
-		url_seos = "https://we06.settrade.com/daytradeflex/streamingSeos.jsp";
-		url_dataprovider = "https://wwwc11.settrade.com/realtime/streaming4/Streaming4DataProvider.jsp";
-		url_dataproviderbinary = "https://wwwc11.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
-	}
 	
 	public static BrokerStreaming getInstance() {
 		return (BrokerStreaming) getBroker(defaultUserName, 
@@ -75,10 +69,10 @@ public class BrokerStreaming extends FlashStreaming {
 	public BrokerStreaming(String username, String password, String pin) {
 		this.username = username;
 		this.password = password;
-		this.accountNo = username + "2";
 		this.pin = pin;
 		this.browser = new Browser(getHttpContext());
 		login_request[login_request.length-1] += username;
+		loadFlashVars();
 	}
 	
 	private String[] login_request = {
@@ -123,6 +117,7 @@ public class BrokerStreaming extends FlashStreaming {
 						
 			} else if ((state + 1) == login_request.length) {
 				logger.info(message("State-%d/%d Authentication Success.",state, login_request.length - 1));
+				/*
 				// Cookie Received : __txtUserRef, __txtBrokerId
 				browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
 				logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
@@ -138,13 +133,39 @@ public class BrokerStreaming extends FlashStreaming {
 								browser.getCookie("__txtUserRef"),
 								new Date().getTime() )));
 				formFilter.setNode(parser.parse()).filter();
-				form = formFilter.actionForm("https://wmb2.settrade.com/C00_DefaultRedirectRealtime.jsp");
-				List<NameValuePair> list = form.build();
-				for (int index = 0; index < list.size(); index++) {
-					if (list.get(index).getName().equals("txtEquityAccountInfo"))
-						System.out.println(list.get(index).getValue());
-					//System.out.printf("%s=%s%n", list.get(index).getName(), list.get(index).getValue());
+				String action = null;
+				NamedNodeMap attributes; 
+				attributes = formFilter.action(Pattern.compile("/C00_DefaultRedirectRealtime.jsp$"))
+						.getAttributes();
+				for (int index = 0; index < attributes.getLength(); index++) {
+					if (attributes.item(index).getNodeName().equals("action"))
+						action = attributes.item(index).getNodeValue();
 				}
+				form = formFilter.actionForm(action);
+				parser.setInputStream(browser.post(action, form));
+				formFilter.setNode(parser.parse()).filter();
+				form = formFilter.actionForm("/realtime/streaming4/flash/Streaming4Screen.jsp");
+				parser.setInputStream(
+						browser.post("/realtime/streaming4/flash/Streaming4Screen.jsp", form));
+				ParamFilter paramFilter = new ParamFilter(parser.parse());
+				paramFilter.filter();
+				attributes = paramFilter.name("FlashVars").getAttributes();
+				for (int index = 0; index < attributes.getLength(); index++) {
+					if (attributes.item(index).getNodeName().equals("value"))
+						setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
+				}
+				printFlashVars();
+				//List<NameValuePair> list = form.build();
+				//for (int index = 0; index < list.size(); index++) {
+
+				//	if (list.get(index).getName().equals("txtEquityAccountInfo")) {
+				//		DataProvider dataProvider = new DataProvider();
+				//		dataProvider.read(list.get(index).getValue());
+				//		this.accountNo = dataProvider.get(0, 0, 2);
+				//	}
+					
+					//System.out.printf("%s=%s%n", list.get(index).getName(), list.get(index).getValue());
+				//}
 				/**
 					"https://wmc2.settrade.com/C00_DefaultRedirectRealtime.jsp"
 						search -> input type='hidden' name='txtEquityAccountInfo' value='T|5221172|5221172~FIS~CASH_BALANCE~Y~N~ ~ ' 
@@ -157,6 +178,72 @@ public class BrokerStreaming extends FlashStreaming {
 			}
 		}
 		return browser.getContext();
+	}
+	
+	@Override
+	protected void loadFlashVars() {
+		Form form = null;
+		HtmlParser parser = new HtmlParser(null);
+		FormFilter formFilter = new FormFilter(null);
+		// Cookie Received : __txtUserRef, __txtBrokerId
+		while (true) {
+			browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
+			logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
+			logger.finest(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
+			if  (browser.getCookie("__txtUserRef").equals("0")) {
+				if (lockLoginProcess(true))
+					synchronized (httpContext) {
+						setHttpContext(login(browser));
+						lockLoginProcess(false);
+					}
+				else
+					browser.setContext(getHttpContext());
+				continue;
+			}
+			break;
+		}
+		// Step 1 
+		//   https://we06.settrade.com/multimarket/redirect_page.jsp 
+		parser.setInputStream(
+				browser.get(String.format("https://we06.settrade.com/multimarket/redirect_page.jsp?" +
+						"txtPage=streaming4&" +
+						"brokerid=%s&" +
+						"userref=%s&" +
+						"resolution=1360&$%d", 
+						browser.getCookie("__txtBrokerId"),
+						browser.getCookie("__txtUserRef"),
+						new Date().getTime() )));
+		formFilter.setNode(parser.parse()).filter();
+		// search -> action URL
+		//   https://*.settrade.com/C00_DefaultRedirectRealtime.jsp
+		String action = null;
+		NamedNodeMap attributes; 
+		attributes = formFilter.action(Pattern.compile("/C00_DefaultRedirectRealtime.jsp$"))
+				.getAttributes();
+		for (int index = 0; index < attributes.getLength(); index++) {
+			if (attributes.item(index).getNodeName().equals("action"))
+				action = attributes.item(index).getNodeValue();
+		}
+		form = formFilter.actionForm(action);
+		// Step 2 
+		//   https://*.settrade.com/C00_DefaultRedirectRealtime.jsp
+		parser.setInputStream(browser.post(action, form));
+		formFilter.setNode(parser.parse()).filter();
+		// Step 3 Redirect
+		//   https://*/realtime/streaming4/flash/Streaming4Screen.jsp
+		String streamingPage = "/realtime/streaming4/flash/Streaming4Screen.jsp";
+		form = formFilter.actionForm(streamingPage);
+		parser.setInputStream(
+				browser.post(streamingPage, form));
+		ParamFilter paramFilter = new ParamFilter(parser.parse());
+		paramFilter.filter();
+		// 
+		attributes = paramFilter.name("FlashVars").getAttributes();
+		for (int index = 0; index < attributes.getLength(); index++) {
+			if (attributes.item(index).getNodeName().equals("value"))
+				setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
+		}
+		printFlashVars();
 	}
 	
 	private Form buildForm(Node node) {
@@ -197,18 +284,21 @@ public class BrokerStreaming extends FlashStreaming {
 	}
 
 	@Override
-	public void buy(String symbol, double price, long volume) {
-		placeOrder(symbol, "B", price, volume);
+	public long buy(String symbol, double price, long volume) {
+		DataProvider data = placeOrder(symbol, "B", price, volume);
+		return Long.valueOf(data.get(2, 6, 0));
 	}
 
 	@Override
-	public void sell(String symbol, double price, long volume) {
-		placeOrder(symbol, "S", price, volume);
+	public long sell(String symbol, double price, long volume) {
+		DataProvider data = placeOrder(symbol, "S", price, volume);
+		return Long.valueOf(data.get(2, 6, 0));
 	}
 
 	@Override
-	public void cancel(String symbol, String orderNo) {
+	public boolean cancel(String symbol, String orderNo) {
 		cancelOrder(symbol, orderNo);
+		return false;
 	}
 	
 }

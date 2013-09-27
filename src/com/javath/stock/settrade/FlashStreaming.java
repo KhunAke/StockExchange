@@ -16,10 +16,10 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.http.client.fluent.Form;
+import org.apache.http.protocol.HttpContext;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.javath.File;
 import com.javath.OS;
 import com.javath.ObjectException;
 import com.javath.mapping.StreamingBidsOffers;
@@ -27,7 +27,6 @@ import com.javath.mapping.StreamingOrder;
 import com.javath.mapping.StreamingOrderHome;
 import com.javath.mapping.StreamingOrderId;
 import com.javath.mapping.StreamingTicker;
-import com.javath.mapping.StreamingTickerId;
 import com.javath.stock.Broker;
 import com.javath.stock.set.Symbol;
 import com.javath.util.Browser;
@@ -42,7 +41,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	private final Lock login_process = new Lock();
 	
-	protected String accountNo = "";
+	//protected String accountNo = getAccountNo();
 	protected String pin = "000000";
 	
 	protected double credit;
@@ -71,16 +70,56 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	private String oldInstTicker2 = "";
 	private String oldSum2 = "";
 	
-	protected String url_synctime; 
-			//= "https://click2win.settrade.com/realtime/streaming4/synctime.jsp";
-	protected String url_seos; 
-			//= "https://click2win.settrade.com/daytradeflex/streamingSeos.jsp";
-	protected String url_dataprovider;
-			//= "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProvider.jsp";
-	protected String url_dataproviderbinary;
-			//= "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
-
-	protected abstract void url_init();
+	private Map<String,String> flashVars;
+	
+	protected void setFlashVars(String[] flashVars) {
+		this.flashVars = new HashMap<String,String>();
+		for (int index = 0; index < flashVars.length; index++) {
+			String[] vars = flashVars[index].split("[=]");
+			if (vars.length == 1)
+				this.flashVars.put(vars[0],"");
+			else
+				this.flashVars.put(vars[0],vars[1]);
+		}
+	}
+	
+	protected String getFlashVars(String name) {
+		try {
+			return flashVars.get(name);
+		} catch (NullPointerException e) {
+			loadFlashVars();
+			return getFlashVars(name);
+		}
+	}
+	
+	protected String getAccountNo() {
+		DataProvider data = new DataProvider(); 
+		data.read(getFlashVars("fvAccountInfoList"));
+		try {
+			return data.get(0, 0, 2);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return "";
+		}
+	}
+	
+	protected String getAccountType() {
+		DataProvider data = new DataProvider(); 
+		data.read(getFlashVars("fvAccountInfoList"));
+		try {
+			return data.get(2, 0, 0);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return "";
+		}
+	}
+	
+	protected void printFlashVars() {
+		for (Iterator<String> iterator = flashVars.keySet().iterator(); iterator.hasNext();) {
+			String key = iterator.next();
+			System.out.printf("%s = %s%n",key,flashVars.get(key));
+		}
+	}
+	
+	protected abstract void loadFlashVars();
 	
 	private Browser browser_for_runnable;
 	
@@ -107,11 +146,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		browser_for_runnable = new Browser();
 		setHttpContext(browser_for_runnable.getContext());
 		browser_for_runnable.setTimeOut(5000);
-		url_init();
 	}
 	
 	public long synctime() {
 		long time = new Date().getTime();
+		String url_synctime = String.format("https://%s%s", getFlashVars("fvPrimaryHost"), getFlashVars("fvSyncTimeServlet"));
 		browser.get(String.format("%s?%d", url_synctime, time));
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() != 200) {
@@ -127,7 +166,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	
 	protected DataProvider seos(Form form) {
 		// browser httpContext
-		browser.post(String.format("%s", url_seos), form);
+		browser.post(String.format("%s/daytradeflex/streamingSeos.jsp", getFlashVars("fvITPHost")), form);
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() != 200) {
 			logger.severe(message("HTTP Status %s \"%s\"",browser.getStatusCode(), browser.getReasonPhrase()));
@@ -156,23 +195,29 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	protected DataProvider seos(String service) {
 		Form form = Form.form();
 		form.add("Service", service);
-		form.add("txtAccountNo", "");
+		form.add("txtAccountNo", getAccountNo());
 		form.add("NewMode", "Pull");
-		form.add("txtAccountType", "");
+		form.add("txtAccountType", getAccountType());
 		return seos(form);
 	}
 	
+	// Key is orderNo
+	private Map<Long,StreamingOrder> orders = new HashMap<Long,StreamingOrder>();
+	
 	public void orderStatus() {
-		// 78230484| |PTT|15:32:08|B|238.00|100|0|0|100|Cancel(XA)||N|N|null|0|null|null|78230484|52017|Day|
-		// orderNo||symbol|time|side|price|volume|match|balance|cancelled|status|
-		// status = Queuing(SX), Cancelled(CX)
+		//        0|1|	   2|   3|	 4|	   5|	  6|	  7|	  8|	    9|	  10|
+		// Order No| |Symbol|Time|Side|Price|Volume|Matched|Balance|Cancelled|Status|
+		// 11|12|13|14|	             15|16|17|      18|          19|       20|
+		//   |  |  |  |Date(dd-mm-yyyy)|  |  |Order No|Order Broker|Condition|
+		// status = Queuing(SX), Cancelled(CX), Pending(S), Open(O)
 		DataProvider data = seos("OrderStatus");
 		int service = data.getOrderOfServiceName("OrderStatus");
 		int results = data.getNumberOfResults(service);
 		for (int result = 0; result < results; result++) {
 			String[] string = data.getResult(service, result);
-			System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",string[0],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10]);
-			storeOrder(string);
+			System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+					string[0],string[1],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10],string[11],string[12],string[13],string[14],string[15],string[16],string[17],string[18],string[19],string[20]);
+			//storeOrder(string);
 		}
 	}
 	
@@ -228,8 +273,11 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}
 	}
 	
+	// Key is [ credit|cash|line ]
+	private final Map<String, Long> budgets = new HashMap<String, Long>();
+	
 	public void accountInfo() {
-		// credit|ee|line|null|0.00|null
+		// credit|  ee|line|null|0.00|null
 		// credit|cash|line|null|0.00|null
 		DataProvider data = seos("AccountInfo");
 		int service = data.getOrderOfServiceName("AccountInfo");
@@ -238,16 +286,39 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			logger.warning(message("Account Information have %d recode.", results));
 		//for (int result = 0; result < results; result++) {
 			String[] string = data.getResult(service, 0);
-			logger.info(message("Credit=%s, Cash=%s, Line=%s%n", string[0], string[1], string[2]));
-			credit=Double.valueOf(string[0]);
-			cash=Double.valueOf(string[1]);
-			line=Double.valueOf(string[2]);
+			logger.info(message("Credit=%s, Cash=%s, Line=%s", string[0], string[1], string[2]));
+			budgets.put("credit", Long.valueOf(string[0].replace(".", "")));
+			budgets.put("cash", Long.valueOf(string[1].replace(".", "")));
+			budgets.put("line", Long.valueOf(string[2].replace(".", "")));
 		//}
 	}
 	
+	// Key is symbol
+	private Map<String, Long> stock = new HashMap<String, Long>();
+	
 	public void portfolio() {
-		// PTT| |336.00|0.00|0.00|0.00|0.00|0.00|0|0|0|0.00| |null|0.00|0.00
+		//      0|1|           2|           3|           4|             5|              6|
+		// Symbol| |Market Price|Amount Price|Market Value|Unrealized P/L|%Unrealized P/L|
+		//            7|8|              *9|           10|          11|12|13|14|15 
+		// Realized P/L| |Available Volume|Actual Volume|Average Cost|  |  |  |
 		DataProvider data = seos("Portfolio");
+		int service = data.getOrderOfServiceName("Portfolio");
+		int results = data.getNumberOfResults(service);
+		for (int result = 0; result < results; result++) {
+			String[] string = data.getResult(service, result);
+			System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+					string[0],string[1],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10],string[11],string[12],string[13],string[14],string[15]);
+			//storeOrder(string);
+			synchronized (stock) {
+				stock.put(string[0], Long.valueOf(string[9]));
+			}
+		}
+	}
+	
+	public long checkStock(String symbol) {
+		synchronized (stock) {
+			return stock.get(symbol);
+		}
 	}
 	
 	protected DataProvider placeOrder(String symbol, String order, double price, long volue) {
@@ -261,7 +332,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		form.add("txtBorS", order);
 		form.add("txtPublishVol", "");
 		form.add("txtSymbol", symbol);
-		form.add("txtAccountNo", accountNo); // AccountNo
+		form.add("txtAccountNo", getAccountNo()); // AccountNo
 		form.add("txtQty", String.valueOf(volue));
 		form.add("Service", "PlaceOrder");
 		form.add("txtPrice", String.valueOf(price));
@@ -284,7 +355,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		form.add("txtNewATOATC", "");
 		form.add("extOrderNo", null);
 		form.add("txtClientType", "");
-		form.add("txtAccountNo", accountNo); // AccountNo
+		form.add("txtAccountNo", getAccountNo()); // AccountNo
 		form.add("txtPrice", "");
 		form.add("txtNvdr", "");
 		form.add("txtPIN_new", pin); // Pin
@@ -301,8 +372,8 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			name = URLEncoder.encode(name,Charset.defaultCharset().name());
 			// optionValue=<SUM:N|Y>|<SET|TFEX>|Foreign#Warrant|SET50#Options
 			value = URLEncoder.encode(name,Charset.defaultCharset().name());
-			String  request = String.format("%s?service=S4Setting&optionName=%s&optionValue=%s",
-				url_dataprovider, name, value);
+			String  request = String.format("https://%s%s?service=S4Setting&optionName=%s&optionValue=%s",
+					getFlashVars("fvPrimaryHost"), getFlashVars("fvDataStrServlet"), name, value);
 			browser.get(request);
 			logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 			if (browser.getStatusCode() != 200) {
@@ -316,7 +387,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	}
 	
 	protected DataProvider dataProvider(Form form) {
-		browser.post(String.format("%s", url_dataprovider), 
+		browser.post(String.format("https://%s%s", getFlashVars("fvPrimaryHost"), getFlashVars("fvDataStrServlet")), 
 				form);
 		logger.info(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() != 200) {
@@ -330,7 +401,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	protected DataProviderBinary dataProviderBinary(Browser browser, Form form) {
 		if (!browser.getContext().equals(getHttpContext()))
 			browser.setContext(getHttpContext());
-		browser.post(String.format("%s", url_dataproviderbinary), 
+		browser.post(String.format("https://%s%s", getFlashVars("fvPrimaryHost"), getFlashVars("fvDataBinServlet")), 
 				form);
 		logger.fine(message("Cache in \"%s\"", browser.getFileContent()));
 		if (browser.getStatusCode() == 200) {
@@ -676,5 +747,30 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		trigger.addTodo(new TodoAdapter(time, this, 
 				String.format(Locale.US, "%1$s(%2$s)", 
 				this.getClass().getSimpleName(), Trigger.datetime(time)),5));
+	}
+	
+	public long buy(String symbol, double price, long volume) {
+		long cost = Math.round(price * volume * (1 + getCommissionRate()));
+		long budget = 0;
+		try {
+			budget = budgets.get("line");
+		} catch (NullPointerException e) {
+			accountInfo();
+			budget = budgets.get("line");
+		}
+		if (budget >= cost) {
+			DataProvider data = placeOrder(symbol, "B", price, volume);
+		}
+		return 0;
+	}
+	
+	public long sell(String symbol, double price, long volume) {
+		placeOrder(symbol, "S", price, volume);
+		return 0;
+	}
+	
+	public boolean cancel(String symbol,  String orderNo) {
+		cancelOrder(symbol, orderNo);
+		return false;
 	}
 }

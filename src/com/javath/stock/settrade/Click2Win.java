@@ -4,9 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-
-
-
 import java.util.Properties;
 
 import org.apache.http.client.fluent.Form;
@@ -20,6 +17,7 @@ import com.javath.util.Browser;
 import com.javath.util.html.FormFilter;
 import com.javath.util.html.HtmlParser;
 import com.javath.util.html.InputFilter;
+import com.javath.util.html.ParamFilter;
 
 public class Click2Win extends FlashStreaming {
 	
@@ -64,13 +62,6 @@ public class Click2Win extends FlashStreaming {
 			//logger.severe(message(e));
 			throw new ObjectException(e);
 		}
-	}
-	
-	protected void url_init() {
-		url_synctime = "https://click2win.settrade.com/realtime/streaming4/synctime.jsp";
-		url_seos = "https://click2win.settrade.com/daytradeflex/streamingSeos.jsp";
-		url_dataprovider = "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProvider.jsp";
-		url_dataproviderbinary = "https://pushctw1.settrade.com/realtime/streaming4/Streaming4DataProviderBinary.jsp";
 	}
 	
 	public static Click2Win getInstance() {
@@ -130,6 +121,36 @@ public class Click2Win extends FlashStreaming {
 		return browser.getContext();	
 	}
 	
+	@Override
+	protected void loadFlashVars() {
+		HtmlParser parser = new HtmlParser(null);
+		//https://click2win.settrade.com/realtime/streaming4/flash/Streaming4Screen.jsp
+		String streamingPage = "https://click2win.settrade.com/realtime/streaming4/flash/Streaming4Screen.jsp";
+		while (true) {
+			parser.setInputStream(browser.get(streamingPage));
+			if (browser.getStatusCode() != 200) {
+				if (lockLoginProcess(true))
+					synchronized (httpContext) {
+						setHttpContext(login(browser));
+						lockLoginProcess(false);
+					}
+				else
+					browser.setContext(getHttpContext());
+				continue;
+			}
+			break;
+		}
+		ParamFilter paramFilter = new ParamFilter(parser.parse());
+		paramFilter.filter();
+		// 
+		NamedNodeMap attributes = paramFilter.name("FlashVars").getAttributes();
+		for (int index = 0; index < attributes.getLength(); index++) {
+			if (attributes.item(index).getNodeName().equals("value"))
+				setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
+		}
+		printFlashVars();
+	}
+	
 	private Form buildForm(Node node) {
 		//HtmlParser.print(node);
 		if (node == null)
@@ -167,20 +188,14 @@ public class Click2Win extends FlashStreaming {
 				//logger.warning(message(HtmlParser.node(input)));
 			}
 		}
-		
 		return form;
 	}
-	
-	public void buy(String symbol, double price, long volume) {
-		placeOrder(symbol, "B", price, volume);
+
+	@Override
+	public double getCommissionRate() {
+		return 0.1605;
 	}
 	
-	public void sell(String symbol, double price, long volume) {
-		placeOrder(symbol, "S", price, volume);
-	}
 	
-	public void cancel(String symbol,  String orderNo) {
-		cancelOrder(symbol, orderNo);
-	}
 		
 }

@@ -1,6 +1,8 @@
 package com.javath.util.html;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.client.fluent.Form;
 import org.w3c.dom.NamedNodeMap;
@@ -33,10 +35,37 @@ public class FormFilter extends Filter {
 		return null;
 	}
 	
+	public Node action(Pattern url) {
+		List<Node> forms = this.nodes;
+		for (int index = 0; index < forms.size(); index++) {
+			Node htmlForm = forms.get(index);
+			NamedNodeMap attributes = htmlForm.getAttributes();
+			for (int item = 0; item < attributes.getLength(); item++) {
+				Node attribute = attributes.item(item);
+				if (attribute.getNodeName().equals("action") &&
+						url.matcher(attribute.getNodeValue()).find()) {
+					return htmlForm;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public Form actionForm(Pattern url) {
+		Node node = action(url);
+		if (node == null)
+			return null;
+		return actionForm(node);
+	}
+	
 	public Form actionForm(String url) {
 		Node node = action(url);
 		if (node == null)
 			return null;
+		return actionForm(node);
+	}
+	
+	public Form actionForm(Node node) {
 		Form form = Form.form();
 		InputFilter inputFilter = new InputFilter(node);
 		List<Node> inputs = inputFilter.filter();
@@ -56,5 +85,7 @@ public class FormFilter extends Filter {
 		}
 		return form;
 	}
+	
+	
 	
 }
