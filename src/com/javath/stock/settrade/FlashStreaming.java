@@ -8,12 +8,14 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.client.fluent.Form;
 import org.apache.http.protocol.HttpContext;
@@ -83,11 +85,21 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		}
 	}
 	
+	private void processLogin() {
+		if (lockLoginProcess(true))
+			synchronized (httpContext) {
+				setHttpContext(login(browser));
+				lockLoginProcess(false);
+			}
+		else
+			browser.setContext(getHttpContext());
+	}
+	
 	protected String getFlashVars(String name) {
 		try {
 			return flashVars.get(name);
 		} catch (NullPointerException e) {
-			loadFlashVars();
+			processLogin();
 			return getFlashVars(name);
 		}
 	}
@@ -178,13 +190,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		} catch (ObjectException e) {
 			if (e.getMessage().equals("Unauthorized Access.")) {
 				logger.warning(message("Unauthorized Access"));
-				if (lockLoginProcess(true))
-					synchronized (httpContext) {
-						setHttpContext(login(browser));
-						lockLoginProcess(false);
-					}
-				else
-					browser.setContext(getHttpContext());
+				processLogin();
 				dataProvider = seos(form);
 			} else
 				throw e;
@@ -204,7 +210,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	// Key is orderNo
 	private Map<Long,StreamingOrder> orders = new HashMap<Long,StreamingOrder>();
 	
-	public void orderStatus() {
+	public long[] orderStatus() {
 		//        0|1|	   2|   3|	 4|	   5|	  6|	  7|	  8|	    9|	  10|
 		// Order No| |Symbol|Time|Side|Price|Volume|Matched|Balance|Cancelled|Status|
 		// 11|12|13|14|	             15|16|17|      18|          19|       20|
@@ -213,11 +219,51 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		DataProvider data = seos("OrderStatus");
 		int service = data.getOrderOfServiceName("OrderStatus");
 		int results = data.getNumberOfResults(service);
+		ArrayList<Long> arrayOrderNo = new ArrayList<Long>();
 		for (int result = 0; result < results; result++) {
 			String[] string = data.getResult(service, result);
+			//
 			System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 					string[0],string[1],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10],string[11],string[12],string[13],string[14],string[15],string[16],string[17],string[18],string[19],string[20]);
-			//storeOrder(string);
+			//
+			long orderNo = Long.valueOf(string[0]);
+			StreamingOrder order = getOrder(orderNo);
+			if (order == null) {
+				StreamingOrderId id = new StreamingOrderId(string[2], castTime(string[3]));
+				order = new StreamingOrder(id);
+				order.setOrderNo(orderNo);
+				order.setSide(string[4]);
+				order.setPrice(Double.valueOf(string[5]));
+				order.setVolume(Integer.valueOf(string[6]));
+				arrayOrderNo.add(orderNo);
+			}
+			order.setMatched(Integer.valueOf(string[7]));
+			order.setBalance(Integer.valueOf(string[8]));
+			order.setCancelled(Integer.valueOf(string[9]));
+			order.setStatus(string[10]);
+			try {
+				order.setOrderNo(Long.valueOf(string[19]));
+			} catch (NumberFormatException e) {}
+			synchronized (orders) {
+				orders.put(orderNo, order);
+			}
+		}
+		long[] newOrderNo = new long[arrayOrderNo.size()];
+		for (int index = 0; index < newOrderNo.length; index++) {
+			newOrderNo[index] = arrayOrderNo.get(index);
+		}
+		return newOrderNo;
+	}
+	
+	public StreamingOrder getOrder(long orderNo) {
+		synchronized (orders) {
+			return orders.get(orderNo);
+		}
+	}
+	
+	public Set<Long> getSetOfOrderNo() {
+		synchronized (orders) {
+			return orders.keySet();
 		}
 	}
 	
@@ -257,7 +303,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		order.setSide(data[4]);
 		order.setPrice(Double.valueOf(data[5]));
 		order.setVolume(Integer.valueOf(data[6]));
-		order.setMatch(Integer.valueOf(data[7]));
+		order.setMatched(Integer.valueOf(data[7]));
 		order.setBalance(Integer.valueOf(data[8]));
 		order.setCancelled(Integer.valueOf(data[9]));
 		order.setStatus(data[10]);
@@ -286,7 +332,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			logger.warning(message("Account Information have %d recode.", results));
 		//for (int result = 0; result < results; result++) {
 			String[] string = data.getResult(service, 0);
-			logger.info(message("Credit=%s, Cash=%s, Line=%s", string[0], string[1], string[2]));
+			//logger.info(message("Credit=%s, Cash=%s, Line=%s", string[0], string[1], string[2]));
 			budgets.put("credit", Long.valueOf(string[0].replace(".", "")));
 			budgets.put("cash", Long.valueOf(string[1].replace(".", "")));
 			budgets.put("line", Long.valueOf(string[2].replace(".", "")));
@@ -294,7 +340,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 	}
 	
 	// Key is symbol
-	private Map<String, Long> stock = new HashMap<String, Long>();
+	private Map<String, Long> stocks = new HashMap<String, Long>();
 	
 	public void portfolio() {
 		//      0|1|           2|           3|           4|             5|              6|
@@ -306,18 +352,18 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 		int results = data.getNumberOfResults(service);
 		for (int result = 0; result < results; result++) {
 			String[] string = data.getResult(service, result);
-			System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-					string[0],string[1],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10],string[11],string[12],string[13],string[14],string[15]);
-			//storeOrder(string);
-			synchronized (stock) {
-				stock.put(string[0], Long.valueOf(string[9]));
+			//
+			//System.out.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+			//		string[0],string[1],string[2],string[3],string[4],string[5],string[6],string[7],string[8],string[9],string[10],string[11],string[12],string[13],string[14],string[15]);
+			synchronized (stocks) {
+				stocks.put(string[0], Long.valueOf(string[9]));
 			}
 		}
 	}
 	
 	public long checkStock(String symbol) {
-		synchronized (stock) {
-			return stock.get(symbol);
+		synchronized (stocks) {
+			return stocks.get(symbol);
 		}
 	}
 	
@@ -412,13 +458,7 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 			} catch (ObjectException e) {
 				if (e.getMessage().equals("Unauthorised Access")) {
 					logger.warning(message("Unauthorised Access"));
-					if (lockLoginProcess(true))
-						synchronized (httpContext) {
-							setHttpContext(login(browser));
-							lockLoginProcess(false);
-						}
-					else
-						browser.setContext(getHttpContext());
+					processLogin();
 					return dataProviderBinary(browser, form);
 				} else
 					throw e;
@@ -749,28 +789,63 @@ public abstract class FlashStreaming extends Broker  implements Runnable{
 				this.getClass().getSimpleName(), Trigger.datetime(time)),5));
 	}
 	
-	public long buy(String symbol, double price, long volume) {
-		long cost = Math.round(price * volume * (1 + getCommissionRate()));
-		long budget = 0;
-		try {
-			budget = budgets.get("line");
-		} catch (NullPointerException e) {
-			accountInfo();
-			budget = budgets.get("line");
-		}
-		if (budget >= cost) {
-			DataProvider data = placeOrder(symbol, "B", price, volume);
-		}
-		return 0;
+	public void buy(int source, String symbol, double price) {
+		long volume = 100;
+		logger.info(message("%s buy %s,%.2f,%d", getName(), symbol, price, volume));
+		//buy(symbol,price,100);
 	}
 	
-	public long sell(String symbol, double price, long volume) {
-		placeOrder(symbol, "S", price, volume);
-		return 0;
+	public long[] buy(String symbol, double price, long volume) {
+		long cost = Math.round(price * volume * (100 + getCommissionRate()));
+		long budget = 0;
+		synchronized (budgets) {
+			try {
+				budget = budgets.get("line");
+			} catch (NullPointerException e) {
+				processLogin();
+				budget = budgets.get("line");
+			}
+		}
+		if (budget >= cost) {
+			placeOrder(symbol, "B", price, volume);
+			return refreshStatus();
+		}
+		return null;
+	}
+	
+	public void sell(int source, String symbol, double price) {
+		long volume = 100;
+		logger.info(message("%s sell %s,%.2f,%d", getName(), symbol, price, volume));
+		//sell(symbol,price,100);
+	}
+	
+	public long[] sell(String symbol, double price, long volume) {
+		long stock = 0;
+		synchronized (stocks) {
+			try {
+				stock = stocks.get(symbol);
+			} catch (NullPointerException e) {
+				processLogin();
+				stock = stocks.get(symbol);
+			}
+		}
+		if (stock >= volume) {
+			placeOrder(symbol, "S", price, volume);
+			return refreshStatus();
+		}
+		return null;
 	}
 	
 	public boolean cancel(String symbol,  String orderNo) {
 		cancelOrder(symbol, orderNo);
+		refreshStatus();
 		return false;
+	}
+	
+	protected long[] refreshStatus() {
+		long[] result = orderStatus();
+		accountInfo();
+		portfolio();
+		return result;
 	}
 }

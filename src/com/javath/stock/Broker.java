@@ -1,7 +1,9 @@
 package com.javath.stock;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.protocol.HttpContext;
 
@@ -24,13 +26,17 @@ public abstract class Broker extends Object {
 	
 	protected Browser browser;
 	protected HttpContext httpContext;
+	protected String name;
 	
 	protected abstract HttpContext login(Browser browser);
 	public abstract double getCommissionRate();
+	public abstract String getName();
 	public abstract void portfolio();
-	public abstract long buy(String symbol, double price, long volume);
-	public abstract long sell(String symbol, double price, long volume); 
-	public abstract boolean cancel(String symbol,  String orderNo);
+	public abstract void buy(int source, String symbol, double price);
+	public abstract long[] buy(String symbol, double price, long volume);
+	public abstract void sell(int source, String symbol, double price);
+	public abstract long[] sell(String symbol, double price, long volume); 
+	public abstract boolean cancel(String symbol, String orderNo);
 
 	public HttpContext getHttpContext() {
 		synchronized (httpContext) {
@@ -44,4 +50,19 @@ public abstract class Broker extends Object {
 		}
 	}
 	
+	public static void signalBuy(int source, String symbol, double price) {
+		Set<String> keys =   brokers.keySet();
+		for (Iterator<String> iterator = keys.iterator(); iterator.hasNext();) {
+			String key = iterator.next();
+			brokers.get(key).buy(source, symbol, price);
+		}
+	}
+	
+	public static void signalSell(int source, String symbol, double price) {
+		Set<String> keys =   brokers.keySet();
+		for (Iterator<String> iterator = keys.iterator(); iterator.hasNext();) {
+			String key = iterator.next();
+			brokers.get(key).sell(source, symbol, price);
+		}
+	}
 }

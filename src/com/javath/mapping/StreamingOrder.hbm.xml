@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
 "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
-<!-- Generated Sep 17, 2013 2:05:15 PM by Hibernate Tools 4.0.0 -->
+<!-- Generated Sep 30, 2013 2:02:00 PM by Hibernate Tools 4.0.0 -->
 <hibernate-mapping>
     <class name="com.javath.mapping.StreamingOrder" table="streaming_order" schema="public">
         <composite-id name="id" class="com.javath.mapping.StreamingOrderId">
@@ -24,8 +24,8 @@
         <property name="volume" type="java.lang.Integer">
             <column name="volume" />
         </property>
-        <property name="match" type="java.lang.Integer">
-            <column name="match" />
+        <property name="matched" type="java.lang.Integer">
+            <column name="matched" />
         </property>
         <property name="balance" type="java.lang.Integer">
             <column name="balance" />
@@ -35,6 +35,9 @@
         </property>
         <property name="status" type="string">
             <column name="status" length="32" />
+        </property>
+        <property name="orderBroker" type="java.lang.Long">
+            <column name="order_broker" />
         </property>
     </class>
 </hibernate-mapping>

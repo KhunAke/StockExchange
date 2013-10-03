@@ -174,23 +174,5 @@ public class BrokerBualuang extends FlashStreaming {
 		
 		textNode.print();
 	}
-
-	@Override
-	public void buy(String symbol, double price, long volume) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void sell(String symbol, double price, long volume) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void cancel(String symbol, String orderNo) {
-		// TODO Auto-generated method stub
-		
-	}
 	
 }

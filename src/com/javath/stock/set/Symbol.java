@@ -2,6 +2,8 @@ package com.javath.stock.set;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -12,11 +14,13 @@ import com.javath.mapping.SettradeBoard;
 import com.javath.mapping.SettradeBoardId;
 import com.javath.mapping.StreamingBidsOffers;
 import com.javath.mapping.StreamingBidsOffersId;
+import com.javath.mapping.StreamingOrder;
 import com.javath.mapping.StreamingTicker;
 import com.javath.mapping.StreamingTickerId;
 
 public class Symbol extends Object implements Runnable {
 	
+	// Key is symbol.name
 	private static final Map<String,Symbol> symbols = new HashMap<String,Symbol>();
 	private static long changeDateTime = 0;
 	
@@ -34,6 +38,7 @@ public class Symbol extends Object implements Runnable {
 	
 	private final Map<Double,Long> lastMapVolume = new HashMap<Double,Long>();
 	private final Map<Double,Long> MapVolume = new TreeMap<Double,Long>();
+	private final List<Long> listOrderNo = new LinkedList<Long>();
 	
 	private SettradeBoard lastBoard;
 	private final ConcurrentLinkedQueue<SettradeBoard> boards = new ConcurrentLinkedQueue<SettradeBoard>();

@@ -161,7 +161,7 @@ public class BrokerSettrade extends Broker{
 		throw new ObjectException(String.format("Response %d %s", browser.getStatusCode(), browser.getReasonPhrase()));
 	}
 	
-	public void buy(String symbol, double price, long volume) {
+	public long buy(String symbol, double price, long volume) {
 		String request = "http://www.settrade.com/portfolio/actions/stock_sendOrderRep.jsp";
 		Form form = Form.form();
 		form.add("BS", "B");
@@ -169,7 +169,7 @@ public class BrokerSettrade extends Broker{
 		form.add("volume", String.valueOf(volume));
 		form.add("price", String.valueOf(price));
 		form.add("chkComm", "on");
-		form.add("comm", String.valueOf(CommissionRate) );
+		form.add("comm", String.valueOf(getCommissionRate()) );
 		browser.post(request, form);
 		if (browser.getStatusCode() == 200)
 			logger.info(message("HTTP Response %d %s", browser.getStatusCode(), browser.getReasonPhrase()));
@@ -178,9 +178,10 @@ public class BrokerSettrade extends Broker{
 			logger.warning(message);
 			throw new ObjectException(message);
 		}
+		return 0;
 	}
 	
-	public void sell(String symbol, double price, long volume) {
+	public long sell(String symbol, double price, long volume) {
 		String request = "http://www.settrade.com/portfolio/actions/stock_sendOrderRep.jsp";
 		Form form = Form.form();
 		form.add("BS", "S");
@@ -197,10 +198,18 @@ public class BrokerSettrade extends Broker{
 			logger.warning(message);
 			throw new ObjectException(message);
 		}
+		return 0;
 	}
 
 	@Override
-	public void cancel(String symbol, String orderNo) {
+	public boolean cancel(String symbol, String orderNo) {
 		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public double getCommissionRate() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

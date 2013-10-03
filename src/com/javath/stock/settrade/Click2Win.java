@@ -3,8 +3,10 @@ package com.javath.stock.settrade;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.http.client.fluent.Form;
 import org.apache.http.protocol.HttpContext;
@@ -72,7 +74,7 @@ public class Click2Win extends FlashStreaming {
 	public Click2Win(String username, String password) {
 		this.username = username;
 		this.password = password;
-		this.browser = new Browser(getHttpContext());
+		browser = new Browser(getHttpContext());
 	}
 	
 	private static String[] login_request = {
@@ -118,6 +120,8 @@ public class Click2Win extends FlashStreaming {
 				logger.info(message("State-%d/%d Authentication Success.", state, login_request.length - 1));
 			}
 		}
+		loadFlashVars();
+		refreshStatus();
 		return browser.getContext();	
 	}
 	
@@ -126,19 +130,9 @@ public class Click2Win extends FlashStreaming {
 		HtmlParser parser = new HtmlParser(null);
 		//https://click2win.settrade.com/realtime/streaming4/flash/Streaming4Screen.jsp
 		String streamingPage = "https://click2win.settrade.com/realtime/streaming4/flash/Streaming4Screen.jsp";
-		while (true) {
-			parser.setInputStream(browser.get(streamingPage));
-			if (browser.getStatusCode() != 200) {
-				if (lockLoginProcess(true))
-					synchronized (httpContext) {
-						setHttpContext(login(browser));
-						lockLoginProcess(false);
-					}
-				else
-					browser.setContext(getHttpContext());
-				continue;
-			}
-			break;
+		parser.setInputStream(browser.get(streamingPage));
+		if (browser.getStatusCode() != 200) {
+			throw new ObjectException(browser.getReasonPhrase());
 		}
 		ParamFilter paramFilter = new ParamFilter(parser.parse());
 		paramFilter.filter();
@@ -148,7 +142,6 @@ public class Click2Win extends FlashStreaming {
 			if (attributes.item(index).getNodeName().equals("value"))
 				setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
 		}
-		printFlashVars();
 	}
 	
 	private Form buildForm(Node node) {
@@ -195,7 +188,12 @@ public class Click2Win extends FlashStreaming {
 	public double getCommissionRate() {
 		return 0.1605;
 	}
-	
-	
-		
+
+	@Override
+	public String getName() {
+		if (name == null)
+			name = String.format("%s@%s", username, this.getClass().getCanonicalName());
+		return name;
+	}
+
 }

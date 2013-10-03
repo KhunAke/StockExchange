@@ -72,7 +72,6 @@ public class BrokerStreaming extends FlashStreaming {
 		this.pin = pin;
 		this.browser = new Browser(getHttpContext());
 		login_request[login_request.length-1] += username;
-		loadFlashVars();
 	}
 	
 	private String[] login_request = {
@@ -117,66 +116,10 @@ public class BrokerStreaming extends FlashStreaming {
 						
 			} else if ((state + 1) == login_request.length) {
 				logger.info(message("State-%d/%d Authentication Success.",state, login_request.length - 1));
-				/*
-				// Cookie Received : __txtUserRef, __txtBrokerId
-				browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
-				logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
-				logger.finest(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
-				
-				parser.setInputStream(
-						browser.get(String.format("https://we06.settrade.com/multimarket/redirect_page.jsp?" +
-								"txtPage=streaming4&" +
-								"brokerid=%s&" +
-								"userref=%s&" +
-								"resolution=1360&$%d", 
-								browser.getCookie("__txtBrokerId"),
-								browser.getCookie("__txtUserRef"),
-								new Date().getTime() )));
-				formFilter.setNode(parser.parse()).filter();
-				String action = null;
-				NamedNodeMap attributes; 
-				attributes = formFilter.action(Pattern.compile("/C00_DefaultRedirectRealtime.jsp$"))
-						.getAttributes();
-				for (int index = 0; index < attributes.getLength(); index++) {
-					if (attributes.item(index).getNodeName().equals("action"))
-						action = attributes.item(index).getNodeValue();
-				}
-				form = formFilter.actionForm(action);
-				parser.setInputStream(browser.post(action, form));
-				formFilter.setNode(parser.parse()).filter();
-				form = formFilter.actionForm("/realtime/streaming4/flash/Streaming4Screen.jsp");
-				parser.setInputStream(
-						browser.post("/realtime/streaming4/flash/Streaming4Screen.jsp", form));
-				ParamFilter paramFilter = new ParamFilter(parser.parse());
-				paramFilter.filter();
-				attributes = paramFilter.name("FlashVars").getAttributes();
-				for (int index = 0; index < attributes.getLength(); index++) {
-					if (attributes.item(index).getNodeName().equals("value"))
-						setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
-				}
-				printFlashVars();
-				//List<NameValuePair> list = form.build();
-				//for (int index = 0; index < list.size(); index++) {
-
-				//	if (list.get(index).getName().equals("txtEquityAccountInfo")) {
-				//		DataProvider dataProvider = new DataProvider();
-				//		dataProvider.read(list.get(index).getValue());
-				//		this.accountNo = dataProvider.get(0, 0, 2);
-				//	}
-					
-					//System.out.printf("%s=%s%n", list.get(index).getName(), list.get(index).getValue());
-				//}
-				/**
-					"https://wmc2.settrade.com/C00_DefaultRedirectRealtime.jsp"
-						search -> input type='hidden' name='txtEquityAccountInfo' value='T|5221172|5221172~FIS~CASH_BALANCE~Y~N~ ~ ' 
-					"https://wwwe13.settrade.com/realtime/streaming4/Streaming4RegisterOrderStatus.jsp"
-						newAccountNo="5221172"
-						newMkt="E"
-						oldAccountNo=""	
-						oldMkt=""	
-				 */
 			}
 		}
+		loadFlashVars();
+		refreshStatus();
 		return browser.getContext();
 	}
 	
@@ -186,21 +129,11 @@ public class BrokerStreaming extends FlashStreaming {
 		HtmlParser parser = new HtmlParser(null);
 		FormFilter formFilter = new FormFilter(null);
 		// Cookie Received : __txtUserRef, __txtBrokerId
-		while (true) {
-			browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
-			logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
-			logger.finest(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
-			if  (browser.getCookie("__txtUserRef").equals("0")) {
-				if (lockLoginProcess(true))
-					synchronized (httpContext) {
-						setHttpContext(login(browser));
-						lockLoginProcess(false);
-					}
-				else
-					browser.setContext(getHttpContext());
-				continue;
-			}
-			break;
+		browser.get("https://we06.settrade.com/mylib.jsp?txtBrokerId=001");
+		logger.finest(message("__txtUserRef=%s", browser.getCookie("__txtUserRef")));
+		logger.finest(message("__txtBrokerId=%s", browser.getCookie("__txtBrokerId")));
+		if  (browser.getCookie("__txtUserRef").equals("0")) {
+			throw new ObjectException("Cookie name \"__txtUserRef\" not found.");
 		}
 		// Step 1 
 		//   https://we06.settrade.com/multimarket/redirect_page.jsp 
@@ -243,7 +176,6 @@ public class BrokerStreaming extends FlashStreaming {
 			if (attributes.item(index).getNodeName().equals("value"))
 				setFlashVars(attributes.item(index).getNodeValue().split("[&]"));
 		}
-		printFlashVars();
 	}
 	
 	private Form buildForm(Node node) {
@@ -284,21 +216,14 @@ public class BrokerStreaming extends FlashStreaming {
 	}
 
 	@Override
-	public long buy(String symbol, double price, long volume) {
-		DataProvider data = placeOrder(symbol, "B", price, volume);
-		return Long.valueOf(data.get(2, 6, 0));
+	public double getCommissionRate() {
+		return 0.1689;
 	}
 
 	@Override
-	public long sell(String symbol, double price, long volume) {
-		DataProvider data = placeOrder(symbol, "S", price, volume);
-		return Long.valueOf(data.get(2, 6, 0));
-	}
-
-	@Override
-	public boolean cancel(String symbol, String orderNo) {
-		cancelOrder(symbol, orderNo);
-		return false;
+	public String getName() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 }
