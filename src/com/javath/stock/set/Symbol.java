@@ -240,51 +240,26 @@ public class Symbol extends Object implements Runnable {
 
 	@Override
 	public void run() {
+		checkBoard();
+	}
+	
+	private double checkBoard() {
+		double result = 0.0;
 		while (!boards.isEmpty()) {
-			SettradeBoard board = pollBoard();
-			double price = 0.0;
-			double oldValue = 0.0;
-			double newValue = 0.0;
-			long oldVolume = 0;
-			long newVolume = 0;
+			Price lastPrice;
 			try {
-				price = board.getLast();
+				lastPrice = new Price(lastBoard.getLast());
 			} catch (NullPointerException e) {
-				lastBoard = board;
+				lastBoard = pollBoard();
 				continue;
 			}
-			try {
-				oldValue = lastBoard.getValue();
-			} catch (NullPointerException e) {}
-			try {
-				oldVolume = lastBoard.getVolume();
-			} catch (NullPointerException e) {}
-			try {
-				newValue = board.getValue();
-			} catch (NullPointerException e) {}
-			try {
-				newVolume = board.getVolume();
-			} catch (NullPointerException e) {}
-			newValue = newValue - oldValue;
-			newVolume = newVolume - oldVolume;
-			int step = this.price.compareTo(new Price(price));
-			
-			
-			if (newVolume > 0)
-				if (compare(price * newVolume / 1000, newValue))
-					;
-					//System.out.printf("  %s, %f, %d, %f%n",
-					//		name, price, newVolume, newValue);
-				else {
-					System.out.printf("#,%s,%f,%d,%f%n",
-							name, price, newVolume, newValue);
-					splitPrice(name,price, newVolume, newValue);
-				}
-			lastBoard = board;
+			SettradeBoard newBoard = pollBoard();
+			Price NewPrice = new Price(newBoard.getLast());
+			int stepChange = lastPrice.compareTo(NewPrice);
+			if (stepChange != 0)
+				System.out.printf("Change: %d", stepChange);
 		}
-		while (!tickers.isEmpty()) {
-			lastTicker = pollTicker();
-		}
+		return result;
 	}
 	
 	public static void splitPrice(String name,double price, long volume, double value) {
